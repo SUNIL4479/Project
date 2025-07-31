@@ -16,16 +16,16 @@
         <a href="#contests" class="hover:text-gray-300">Contests</a>
         <a href="#leaderboard" class="hover:text-gray-300">Leaderboard</a>
         <a href="#about" class="hover:text-gray-300">About</a>
-        <a href="#login" class="bg-black text-white px-4 py-2 rounded hover:bg-gray-100">Login</a>
+        <a href="#login" class="bg-black text-white px-4 py-1 rounded hover:bg-gray-100">Login</a>
       </nav>
       <button id="menuBtn" class="md:hidden">☰</button>
     </div>
-    <div id="mobileMenu" class="md:hidden hidden px-6 py-4 bg-white">
+    <div id="mobileMenu" class="font-Montserrat md:hidden hidden px-6 py-4 bg-black opacity-90 text-white">
       <a href="#features" class="block py-2">Features</a>
       <a href="#contests" class="block py-2">Contests</a>
       <a href="#leaderboard" class="block py-2">Leaderboard</a>
       <a href="#about" class="block py-2">About</a>
-      <a href="#login" class="block py-2 bg-white text-black px-4 py-2 mt-2 rounded">Login</a>
+      <a href="#login" class="block py-2 text-white py-2 mt-2 rounded">Login</a>
     </div>
   </header>
 
@@ -129,9 +129,22 @@
   <script>
     const menuBtn = document.getElementById('menuBtn');
     const mobileMenu = document.getElementById('mobileMenu');
+  
+    // Toggle menu when menu button is clicked
     menuBtn.addEventListener('click', () => {
       mobileMenu.classList.toggle('hidden');
     });
+  
+    // Hide menu on scroll
+    let lastScrollY = window.scrollY;
+  
+    window.addEventListener('scroll', () => {
+      if (!mobileMenu.classList.contains('hidden')) {
+        mobileMenu.classList.add('hidden');
+      }
+      lastScrollY = window.scrollY;
+    });
   </script>
+  
 </body>
 </html>
