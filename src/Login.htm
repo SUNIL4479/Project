@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Unstop-Style Auth Page</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(180deg, #2c2a2a , #9a9292);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px; /* Adds gap on all screen sizes */
+    }
+
+    .auth-card {
+      background: linear-gradient(180deg, #fffefe , #121111);
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 450px;
+      transition: all 0.3s ease-in-out;
+    }
+
+    .auth-header {
+      font-size: 28px;
+      font-weight: 700;
+      text-align: center;
+      color: #1e88e5;
+      margin-bottom: 20px;
+    }
+
+    .auth-subtext {
+      font-size: 14px;
+      color: #000000;
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    .form-control {
+      border-radius: 12px;
+      padding: 10px 15px;
+    }
+
+    .btn-primary {
+      background-color: #1e88e5;
+      border: none;
+      font-weight: 600;
+      border-radius: 12px;
+    }
+
+    .toggle-link {
+      color: #f6fefd;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container px-3">
+    <div class="auth-card shadow-lg mx-auto">
+      <div class="auth-header text-black" id="formTitle">Sign In</div>
+      <div class="auth-subtext" id="formSubtext">Welcome back! Please enter your credentials.</div>
+
+      <!-- Sign In Form -->
+      <form id="signinForm">
+        <div class="mb-3">
+          <input type="email" class="form-control" placeholder="Email address" required />
+        </div>
+        <div class="mb-3">
+          <input type="password" class="form-control" placeholder="Password" required />
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Login</button>
+      </form>
+
+      <!-- Sign Up Form -->
+      <form id="signupForm" style="display: none;">
+        <div class="mb-3">
+          <input type="text" class="form-control" placeholder="Full Name" required />
+        </div>
+        <div class="mb-3">
+          <input type="email" class="form-control" placeholder="Email address" required />
+        </div>
+        <div class="mb-3">
+          <input type="password" class="form-control" placeholder="Password" required />
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Create Account</button>
+      </form>
+
+      <div class="auth-subtext mt-4">
+        <span id="toggleText">Don't have an account?</span>
+        <span class="toggle-link" onclick="toggleForm()" id="toggleLink">Sign Up</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function toggleForm() {
+      const signInForm = document.getElementById('signinForm');
+      const signUpForm = document.getElementById('signupForm');
+      const formTitle = document.getElementById('formTitle');
+      const formSubtext = document.getElementById('formSubtext');
+      const toggleText = document.getElementById('toggleText');
+      const toggleLink = document.getElementById('toggleLink');
+
+      const isLogin = signInForm.style.display !== 'none';
+
+      signInForm.style.display = isLogin ? 'none' : 'block';
+      signUpForm.style.display = isLogin ? 'block' : 'none';
+      formTitle.innerText = isLogin ? 'Sign Up' : 'Sign In';
+      formSubtext.innerText = isLogin
+        ? 'Create a new account to get started.'
+        : 'Welcome back! Please enter your credentials.';
+      toggleText.innerText = isLogin
+        ? 'Already have an account?'
+        : "Don't have an account?";
+      toggleLink.innerText = isLogin ? 'Sign In' : 'Sign Up';
+    }
+  </script>
+</body>
+</html>
