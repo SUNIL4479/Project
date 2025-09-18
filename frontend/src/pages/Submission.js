@@ -14,8 +14,8 @@ const Submission = () => {
   return (
     <div className="min-h-screen bg-gray-100">
       <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-          <h1 className="text-3xl font-bold text-gray-900">Submit Solution</h1>
+        <div className="max-w-7xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Submit Solution</h1>
           <nav className="mt-4">
             <a href={`/contest/${id}`} className="text-purple-600 hover:text-purple-800">Back to Contest</a>
           </nav>
@@ -23,7 +23,7 @@ const Submission = () => {
       </header>
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
-          <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow">
+          <form onSubmit={handleSubmit} className="bg-white p-4 sm:p-6 rounded-lg shadow">
             <div className="mb-4">
               <label className="block text-gray-700 mb-2" htmlFor="code">Your Code</label>
               <textarea

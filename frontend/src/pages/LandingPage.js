@@ -1,52 +1,46 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import LoginModal from './Login';
 
 const LandingPage = () => {
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+
+  const openLoginModal = () => setIsLoginModalOpen(true);
+  const closeLoginModal = () => setIsLoginModalOpen(false);
+
   return (
-    <div className="min-h-screen bg-white text-black">
+    <div className="min-h-screen bg-black text-white">
       {/* Navbar */}
-      <nav className="bg-black text-white py-4 px-4 fixed top-0 w-full z-10 shadow-lg">
-        <div className="max-w-6xl mx-auto flex justify-between items-center">
-          <Link to="/" className="text-2xl font-bold hover:text-gray-300 transition duration-300">
-            Contest Platform
+      <nav className="bg-white text-black py-4 fixed top-0 w-full z-10 shadow-lg">
+        <div className="flex justify-between items-center px-4">
+          <Link to="/" className="text-xl sm:text-2xl font-bold hover:text-gray-300 transition duration-300 flex items-center">
+            <img src={process.env.PUBLIC_URL + '/LogoC.png'} alt="Logo" className="h-12 w-auto mr-2" />
           </Link>
-          <div className="flex flex-wrap space-x-6">
-            <Link to="/" className="hover:text-gray-300 transition duration-300 border-b-2 border-transparent hover:border-white">
-              Home
-            </Link>
-            <Link to="/leaderboard" className="hover:text-gray-300 transition duration-300 border-b-2 border-transparent hover:border-white">
-              LeaderBoard
-            </Link>
-            <Link to="/contests" className="hover:text-gray-300 transition duration-300 border-b-2 border-transparent hover:border-white">
-              Contests
-            </Link>
-            <Link to="/about" className="hover:text-gray-300 transition duration-300 border-b-2 border-transparent hover:border-white">
-              About
-            </Link>
-            <Link to="/login" className="hover:text-gray-300 transition duration-300 border-b-2 border-transparent hover:border-white">
+          <div className={`flex-col sm:flex-row sm:flex space-x-0 sm:space-x-6 mt-4 sm:mt-0`}>
+            <button onClick={openLoginModal} className="bg-black text-white block px-12 py-2 text-lg rounded-lg font-semibold hover:text-gray-300 border-b-2 border-transparent hover:border-white sm:border-0">
               Login
-            </Link>
+            </button>
           </div>
         </div>
       </nav>
       {/* Hero Section */}
-      <section className="flex flex-col items-center justify-center h-screen px-4 text-center pt-20">
-        <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight">
+      <section className="flex flex-col items-center justify-center min-h-screen px-4 sm:px-6 lg:px-8 text-center pt-20">
+        <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-6 tracking-tight">
           Welcome to Contest Platform
         </h1>
-        <p className="text-xl md:text-2xl mb-8 max-w-2xl leading-relaxed">
+        <p className="text-lg sm:text-xl md:text-2xl mb-8 max-w-2xl leading-relaxed">
           Challenge yourself with coding contests, compete with developers worldwide, and climb the leaderboard.
         </p>
         <div className="flex flex-col sm:flex-row gap-4">
-          <Link
-            to="/login"
-            className="bg-black text-white px-8 py-3 rounded-lg font-semibold hover:bg-gray-800 transition duration-300"
+          <button
+            onClick={openLoginModal}
+            className="bg-white text-black px-8 py-3 rounded-lg font-semibold hover:bg-black hover:text-white transition duration-300"
           >
             Get Started
-          </Link>
+          </button>
           <Link
             to="/contest"
-            className="border-2 border-black text-black px-8 py-3 rounded-lg font-semibold hover:bg-black hover:text-white transition duration-300"
+            className="bg-white border-2 border-black text-black px-8 py-3 rounded-lg font-semibold hover:bg-black hover:text-white transition duration-300"
           >
             View Contests
           </Link>
@@ -54,10 +48,10 @@ const LandingPage = () => {
       </section>
 
       {/* Features Section */}
-      <section className="py-20 px-4 bg-gray-50">
+      <section className="text-black py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-4xl font-bold text-center mb-12">Why Choose Us?</h2>
-          <div className="grid md:grid-cols-3 gap-8">
+          <h2 className="text-3xl sm:text-4xl text-black font-bold text-center mb-8 sm:mb-12">Why Choose Us?</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             <div className="text-center">
               <div className="w-16 h-16 bg-black rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -90,23 +84,25 @@ const LandingPage = () => {
       </section>
 
       {/* Call to Action Section */}
-      <section className="py-20 px-4 bg-black text-white text-center">
-        <h2 className="text-4xl font-bold mb-6">Ready to Start Coding?</h2>
-        <p className="text-xl mb-8 max-w-2xl mx-auto">
+      <section className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8 bg-black text-white text-center">
+        <h2 className="text-3xl sm:text-4xl font-bold mb-6">Ready to Start Coding?</h2>
+        <p className="text-lg sm:text-xl mb-8 max-w-2xl mx-auto">
           Join thousands of developers who are improving their skills through our platform.
         </p>
-        <Link
-          to="/login"
-          className="bg-white text-black px-8 py-3 rounded-lg font-semibold hover:bg-gray-200 transition duration-300"
+        <button
+          onClick={openLoginModal}
+          className="bg-white text-black px-6 sm:px-8 py-3 rounded-lg font-semibold hover:bg-gray-200 transition duration-300"
         >
           Join Now
-        </Link>
+        </button>
       </section>
 
       {/* Footer */}
-      <footer className="py-8 px-4 bg-gray-100 text-center">
-        <p className="text-gray-600">&copy; 2023 Contest Platform. All rights reserved.</p>
+      <footer className="py-6 sm:py-8 px-4 sm:px-6 lg:px-8 bg-gray-100 text-center">
+        <p className="text-sm sm:text-base text-gray-600">&copy; 2023 Contest Platform. All rights reserved.</p>
       </footer>
+
+      <LoginModal isOpen={isLoginModalOpen} onClose={closeLoginModal} />
     </div>
   );
 };
