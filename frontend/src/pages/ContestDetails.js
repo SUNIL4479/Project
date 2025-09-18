@@ -19,8 +19,8 @@ const ContestDetails = () => {
   return (
     <div className="min-h-screen bg-gray-100">
       <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-          <h1 className="text-3xl font-bold text-gray-900">{contest.name}</h1>
+        <div className="max-w-7xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{contest.name}</h1>
           <nav className="mt-4">
             <Link to="/" className="text-purple-600 hover:text-purple-800">Back to Contests</Link>
           </nav>
@@ -28,9 +28,9 @@ const ContestDetails = () => {
       </header>
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
-          <p className="text-lg mb-4">Date: {contest.date}</p>
-          <p className="text-lg mb-6">Status: {contest.status}</p>
-          <h2 className="text-2xl font-semibold mb-6">Problems</h2>
+          <p className="text-base sm:text-lg mb-4">Date: {contest.date}</p>
+          <p className="text-base sm:text-lg mb-6">Status: {contest.status}</p>
+          <h2 className="text-xl sm:text-2xl font-semibold mb-6">Problems</h2>
           <div className="space-y-4">
             {contest.problems.map(problem => (
               <div key={problem.id} className="bg-white p-4 rounded-lg shadow">
