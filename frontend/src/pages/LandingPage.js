@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import LoginModal from './Login';
+import logo from "../components/LogoC.png"
 
 const LandingPage = () => {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -14,7 +15,7 @@ const LandingPage = () => {
       <nav className="bg-white text-black py-4 fixed top-0 w-full z-10 shadow-lg">
         <div className="flex justify-between items-center px-4">
           <Link to="/" className="text-xl sm:text-2xl font-bold hover:text-gray-300 transition duration-300 flex items-center">
-            <img src={process.env.PUBLIC_URL + '/LogoC.png'} alt="Logo" className="h-12 w-auto mr-2" />
+            <img src={logo} alt="Logo" className="h-12 w-auto mr-2" />
           </Link>
           <div className={`flex-col sm:flex-row sm:flex space-x-0 sm:space-x-6 mt-4 sm:mt-0`}>
             <button onClick={openLoginModal} className="bg-black text-white block px-12 py-2 text-lg rounded-lg font-semibold hover:text-gray-300 border-b-2 border-transparent hover:border-white sm:border-0">
