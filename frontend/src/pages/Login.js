@@ -66,7 +66,7 @@ const LoginModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4 sm:px-6 lg:px-8" onClick={handleOverlayClick}>
+    <div className="fixed inset-0 bg-black bg-opacity-85 flex items-center justify-center z-50 px-4 sm:px-6 lg:px-8" onClick={handleOverlayClick}>
       <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md border border-gray-300 relative">
         <button
           onClick={onClose}
@@ -92,7 +92,7 @@ const LoginModal = ({ isOpen, onClose }) => {
         <h2 className="text-3xl font-bold mb-6 text-center text-gray-800">
           {isLogin ? 'Welcome Back' : 'Create Account'}
         </h2>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className='text-black'>
           {!isLogin && (
             <div className="mb-4">
               <label className="block text-gray-700 mb-2 font-medium" htmlFor="name">Full Name</label>
