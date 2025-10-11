@@ -26,9 +26,9 @@ const LandingPage = () => {
       </nav>
       {/* Hero Section */}
       <section className="flex flex-col items-center justify-center min-h-screen px-4 sm:px-6 lg:px-8 text-center pt-20">
-        <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-6 tracking-tight">
-          Welcome to Contest Platform
-        </h1>
+        <h3 className="sm:text-6xl md:text-6xl lg:text-5xl mb-6 tracking-tight">
+          <span className="text-4xl font-bold ">Embrace</span> <span className="text-4xl">the Competition</span>
+        </h3>
         <p className="text-lg sm:text-xl md:text-2xl mb-8 max-w-2xl leading-relaxed">
           Challenge yourself with coding contests, compete with developers worldwide, and climb the leaderboard.
         </p>
