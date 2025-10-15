@@ -1,31 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { useGoogleLogin } from '@react-oauth/google';
-
 const LoginModal = ({ isOpen, onClose }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
-    name: '',
+    username: '',
     email: '',
     password: '',
-    confirmPassword: '',
-    college: ''
   });
+  const [profilePicFile, setProfilePicFile] = useState(null);
+  const backendBase = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
   const [errors, setErrors] = useState({});
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-
-
-  const googleLogin = useGoogleLogin({
-    onSuccess: (tokenResponse) => {
-      console.log('Google login success:', tokenResponse);
-      // Here you can send the token to your backend or handle user authentication
-      // For now, just close the modal
-      onClose();
-    },
-    onError: (error) => {
-      console.log('Google login failed:', error);
-    },
-  });
-
   const githubLogin = () => {
     const clientId = 'Ov23liakOWNLgpXCXhrY';
     const redirectUri = `${window.location.origin}/github-callback`;
@@ -58,34 +42,80 @@ const LoginModal = ({ isOpen, onClose }) => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-    setErrors({ ...errors, [name]: '' }); // Clear error on change
+    setErrors({ ...errors, [name]: '', api: '' }); // Clear error on change
+  };
+
+  const handleFileChange = (e) => {
+    setProfilePicFile(e.target.files[0]);
+    setErrors({ ...errors, profilePic: '' }); // Clear error on change
   };
   const validateForm = () => {
     const newErrors = {};
     if (!formData.email) newErrors.email = 'Email is required';
     if (!formData.password) newErrors.password = 'Password is required';
     if (!isLogin) {
-      if (!formData.name) newErrors.name = 'Name is required';
+      if (!formData.username) newErrors.username = 'username is required';
       if (!formData.college) newErrors.college = 'College is required';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (validateForm()) {
-      console.log(isLogin ? 'Login data:' : 'Sign-up data:', formData);
-      // Handle submission (e.g., API call)
-      if (!isLogin) {
-        setShowSuccessModal(true);
-        setTimeout(() => {
-          setShowSuccessModal(false);
-          setIsLogin(true);
-          setFormData({ username: '', email: '', password: '' });
-        }, 2000);
-      } else {
-        onClose();
+      try {
+        if (isLogin) {
+          // Login
+          const response = await fetch('http://localhost:5000/api/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: formData.email,
+              password: formData.password
+            }),
+          });
+          const data = await response.json();
+          console.log('Login data:', data);
+          if (response.ok) {
+            localStorage.setItem('auth_token', data.token);
+            onClose();
+          } else {
+            setErrors({ ...errors, api: data.message || 'Login failed' });
+          }
+        } else {
+          // Sign up
+          const formDataToSend = new FormData();
+          formDataToSend.append('username', formData.username);
+          formDataToSend.append('email', formData.email);
+          formDataToSend.append('password', formData.password);
+          formDataToSend.append('college', formData.college);
+          if (profilePicFile) {
+            formDataToSend.append('profilePic', profilePicFile);
+          }
+          const response = await fetch('http://localhost:5000/api/register', {
+            method: 'POST',
+            body: formDataToSend,
+          });
+          const data = await response.json();
+          console.log('Sign-up data:', data);
+          if (response.ok) {
+            setShowSuccessModal(true);
+            setTimeout(() => {
+              setShowSuccessModal(false);
+              setIsLogin(true);
+              setFormData({ username: '', email: '', password: '', college: '' });
+              setProfilePicFile(null);
+            }, 2000);
+          } else {
+            setErrors({ ...errors, api: data.message || 'Registration failed' });
+          }
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        setErrors({ ...errors, api: 'An error occurred' });
       }
     }
   };
@@ -117,9 +147,8 @@ const LoginModal = ({ isOpen, onClose }) => {
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-85 flex items-center justify-center z-50 px-4 sm:px-6 lg:px-8" onClick={handleOverlayClick}>
+    <div className="fixed inset-0 bg-black bg-opacity-85 flex items-center justify-center z-50 px-4 sm:px-4 lg:px-5" onClick={handleOverlayClick}>
       <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md border border-gray-300 relative">
         <button
           onClick={onClose}
@@ -147,7 +176,7 @@ const LoginModal = ({ isOpen, onClose }) => {
         </h2>
     <div className="flex justify-between items-center gap-4 mb-4">
       <button
-        onClick={() => googleLogin()}
+        onClick={() => window.location.href = `${backendBase}/auth/google`}
         className="w-1/2 bg-white text-gray-700 py-3 rounded-lg font-semibold border border-gray-300 hover:bg-gray-50 flex items-center justify-center"
       >
         <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
@@ -173,17 +202,50 @@ const LoginModal = ({ isOpen, onClose }) => {
         </div>
 
         <form onSubmit={handleSubmit} className='text-black'>
-          <div>
-            <label className="block text-gray-700 mb-2 font-medium" htmlFor="username">Username</label>
-            <input type='text' id="username" name="username" value={formData.username}
+          {!isLogin && (
+            <div>
+
+              <label className="block text-gray-700 mb-2 font-medium" htmlFor="username">Username</label>
+              <input type='text' id="username" name="username" value={formData.username}
+                  onChange={handleInputChange}
+                  autoComplete="username"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                  placeholder="John Doe" />
+                   {errors.username && <p className="text-red-500 text-sm mt-1">{errors.username}</p>}
+            </div>
+          )}
+          {!isLogin && (
+            <div className="mb-4">
+              <label className="block text-gray-700 mb-2 font-medium" htmlFor="college">College</label>
+              <input
+                type="text"
+                id="college"
+                name="college"
+                value={formData.college}
                 onChange={handleInputChange}
-                autoComplete="username"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-                placeholder="John Doe" />
-                 {errors.username && <p className="text-red-500 text-sm mt-1">{errors.username}</p>}
-          </div>
+                autoComplete="organization"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                placeholder="Your College Name"
+              />
+              {errors.college && <p className="text-red-500 text-sm mt-1">{errors.college}</p>}
+            </div>
+          )}
+          {!isLogin && (
+            <div className="mb-4">
+              <label className="block text-gray-700 mb-2 font-medium" htmlFor="profilePic">Profile Picture</label>
+              <input
+                type="file"
+                id="profilePic"
+                name="profilePic"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+              />
+              {errors.profilePic && <p className="text-red-500 text-sm mt-1">{errors.profilePic}</p>}
+            </div>
+          )}
           <div className="mb-4">
-            <label className="block text-gray-700 mb-2 font-medium" htmlFor="email">Email</label>
+            <label className="block text-gray-700 mb-2 font-medium" htmlFor="email">Email </label>
               <input
                 type="email"
                 id="email"
@@ -191,7 +253,7 @@ const LoginModal = ({ isOpen, onClose }) => {
                 value={formData.email}
                 onChange={handleInputChange}
                 autoComplete="email"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
                 placeholder="you@example.com"
               />
             {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
@@ -205,14 +267,15 @@ const LoginModal = ({ isOpen, onClose }) => {
                 value={formData.password}
                 onChange={handleInputChange}
                 autoComplete="current-password"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
                 placeholder="********"
               />
             {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
           </div>
+          {errors.api && <p className="text-red-500 text-sm mt-1">{errors.api}</p>}
           <button
             type="submit"
-            className="w-full bg-black text-white py-3 rounded-lg font-semibold "
+            className="w-full bg-black text-white py-2 rounded-lg font-semibold "
           >
             {isLogin ? 'Log In' : 'Sign Up'}
           </button>
