@@ -10,6 +10,6 @@ const newUser = new mongoose.Schema({
     createdAt : {type:Date, default:Date.now}
 },{collection : "ContestPlatform"});
 
-module.exports = mongoose.model("Students",newUser);
+module.exports = mongoose.model("students",newUser);
 
 

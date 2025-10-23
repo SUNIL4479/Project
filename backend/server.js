@@ -33,12 +33,12 @@ mongoose.connect(process.env.MONGO_URL,{
 app.get("/",(req,res)=>{
     res.send("Hello World!")
 })
-app.get("/auth/google", passport.authenticate("google",{scope:["profile","email"]}))
+app.get("/auth/google", passport.authenticate("google",{scope:["profile","email"], prompt: "select_account"}))
 app.get("/auth/google/callback", passport.authenticate("google",{session:false, failureRedirect : (process.env.REACT_APP_FRONTEND_URL)+"/login"}),
 (req,res)=>{
     const user = req.user;
     const payload = {id:user._id, username : user.username, email : user.email}
-    const token = jwt.sign(payload,process.env.JWT_SECRET,{expiresIn:"7d"});
+    const token = jwt.sign(payload,process.env.JWT_SECRET,{expiresIn:"1h"});
 
     const redirectURL = new URL('http://localhost:3000');
     redirectURL.pathname = "/auth/success";
@@ -46,7 +46,6 @@ app.get("/auth/google/callback", passport.authenticate("google",{session:false, 
 
     res.redirect(redirectURL.toString());
 });
-
 function authenticateToken(req,res,next){
     const authHeader = req.headers["authorization"];
     const token = authHeader && authHeader.split(" ")[1] || req.query.token;
@@ -83,6 +82,7 @@ app.post("/api/register", upload.single('profilePic'), async (req, res) => {
 
         // Create new user
         const newUser = new User({
+            googleId : "",
             username,
             email,
             password: hashedPassword,
@@ -96,7 +96,6 @@ app.post("/api/register", upload.single('profilePic'), async (req, res) => {
         res.status(500).json({ message: "Server error" });
     }
 });
-
 app.post("/api/login", async (req, res) => {
     try {
         const { email, password } = req.body;

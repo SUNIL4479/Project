@@ -29,9 +29,9 @@ export default function Profile() {
           />
         </div>
         <h2 >Username</h2>
-        <div className="lg:w-1/2 h-12 py-2 px-3 text-white bg-black mb-3 rounded-3xl border border-4 border-gray">{profile ? profile.username : ""}</div>
+        <div className="lg:w-1/2 h-12 py-2 px-3 text-white bg-black mb-3 rounded-3xl border border-4 border-gray">{profile ? profile.username:""}</div>
         <h2 >Email</h2>
-        <div className="lg:w-1/2 h-12 py-2 px-3 text-white bg-black mb-3 rounded-3xl border border-4 border-gray">{profile ? profile.email : ""}</div>
+        <div className="lg:w-1/2 h-12 py-2 px-3 text-white bg-black mb-3 rounded-3xl border border-4 border-gray">{profile ? profile.email:""}</div>
         <h2 >College</h2>
         <div className="lg:w-1/2 h-12 py-2 px-3 text-white bg-black mb-6 rounded-3xl border border-4 border-gray">JohnDoe College</div>   
         <div className="lg:w-1/2 text-center"><button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Edit Profile</button></div>

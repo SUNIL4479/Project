@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 const LoginModal = ({ isOpen, onClose }) => {
+  const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
     username: '',
@@ -55,7 +57,7 @@ const LoginModal = ({ isOpen, onClose }) => {
     if (!formData.password) newErrors.password = 'Password is required';
     if (!isLogin) {
       if (!formData.username) newErrors.username = 'username is required';
-      if (!formData.college) newErrors.college = 'College is required';
+      if (!profilePicFile) newErrors.profilePic = 'Profile picture is required';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -67,7 +69,7 @@ const LoginModal = ({ isOpen, onClose }) => {
       try {
         if (isLogin) {
           // Login
-          const response = await fetch('http://localhost:5000/api/login', {
+          const response = await fetch(`${backendBase}/api/login`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -82,6 +84,7 @@ const LoginModal = ({ isOpen, onClose }) => {
           if (response.ok) {
             localStorage.setItem('auth_token', data.token);
             onClose();
+            navigate('/home');
           } else {
             setErrors({ ...errors, api: data.message || 'Login failed' });
           }
@@ -91,22 +94,24 @@ const LoginModal = ({ isOpen, onClose }) => {
           formDataToSend.append('username', formData.username);
           formDataToSend.append('email', formData.email);
           formDataToSend.append('password', formData.password);
-          formDataToSend.append('college', formData.college);
           if (profilePicFile) {
             formDataToSend.append('profilePic', profilePicFile);
           }
-          const response = await fetch('http://localhost:5000/api/register', {
+          const response = await fetch(`${backendBase}/api/register`, {
             method: 'POST',
             body: formDataToSend,
           });
           const data = await response.json();
-          console.log('Sign-up data:', data);
+          console.log('Signup form data:', formData);
+          console.log('Profile pic file:', profilePicFile);
+          console.log('Signup response status:', response.status);
+          console.log('Signup response data:', data);
           if (response.ok) {
             setShowSuccessModal(true);
             setTimeout(() => {
               setShowSuccessModal(false);
               setIsLogin(true);
-              setFormData({ username: '', email: '', password: '', college: '' });
+              setFormData({ username: '', email: '', password: ''});
               setProfilePicFile(null);
             }, 2000);
           } else {
@@ -212,22 +217,6 @@ const LoginModal = ({ isOpen, onClose }) => {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
                   placeholder="John Doe" />
                    {errors.username && <p className="text-red-500 text-sm mt-1">{errors.username}</p>}
-            </div>
-          )}
-          {!isLogin && (
-            <div className="mb-4">
-              <label className="block text-gray-700 mb-2 font-medium" htmlFor="college">College</label>
-              <input
-                type="text"
-                id="college"
-                name="college"
-                value={formData.college}
-                onChange={handleInputChange}
-                autoComplete="organization"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-                placeholder="Your College Name"
-              />
-              {errors.college && <p className="text-red-500 text-sm mt-1">{errors.college}</p>}
             </div>
           )}
           {!isLogin && (

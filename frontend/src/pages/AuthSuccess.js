@@ -20,7 +20,7 @@ export default function AuthSuccess(){
             headers : {Authorization : `Bearer ${token}`}
         }).then(res=>{
             setProfile(res.data);
-            navigate('/dashboard');
+            navigate('/Home');
         }).catch(err=>{
             setError("Failed to fetch profile");
         })

@@ -18,13 +18,12 @@ passport.use(
             const ProfilePic = profile.photos && profile.photos[0] && profile.photos[0].value;
             let user = await User.findOne({googleId});
             if(!user){
-                user = User({
+                user = new User({
                     googleId,
                     username,
                     email,
-                    ProfilePic 
-                }
-                )
+                    ProfilePic
+                });
             }
             const savedUser = await user.save();
             return done(null, savedUser);
