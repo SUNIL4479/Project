@@ -9,7 +9,7 @@ const LoginModal = ({ isOpen, onClose }) => {
     password: '',
   });
   const [profilePicFile, setProfilePicFile] = useState(null);
-  const backendBase = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+  const backendBase = process.env.REACT_APP_API_URL
   const [errors, setErrors] = useState({});
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const githubLogin = () => {

@@ -23,7 +23,7 @@ const upload = multer({ storage: storage });
 
 app.use(express.json());
 app.use(cors({
-    origin : process.env.REACT_APP_FRONTEND_URL || "http://localhost:3000",
+    origin : process.env.FRONTEND_URL || "http://localhost:3000",
     credentials : true
 }))
 mongoose.connect(process.env.MONGO_URL,{
@@ -34,16 +34,15 @@ app.get("/",(req,res)=>{
     res.send("Hello World!")
 })
 app.get("/auth/google", passport.authenticate("google",{scope:["profile","email"], prompt: "select_account"}))
-app.get("/auth/google/callback", passport.authenticate("google",{session:false, failureRedirect : (process.env.REACT_APP_FRONTEND_URL)+"/login"}),
+app.get("/auth/google/callback", passport.authenticate("google",{session:false, failureRedirect : (process.env.FRONTEND_URL)+"/login"}),
 (req,res)=>{
     const user = req.user;
     const payload = {id:user._id, username : user.username, email : user.email}
     const token = jwt.sign(payload,process.env.JWT_SECRET,{expiresIn:"1h"});
 
-    const redirectURL = new URL('http://localhost:3000');
+    const redirectURL = new URL(process.env.FRONTEND_URL || "http://localhost:3000");
     redirectURL.pathname = "/auth/success";
     redirectURL.searchParams.set("token",token);
-
     res.redirect(redirectURL.toString());
 });
 function authenticateToken(req,res,next){
