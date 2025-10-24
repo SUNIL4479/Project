@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useGoogleLogin } from '@react-oauth/google';
 const LoginModal = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);

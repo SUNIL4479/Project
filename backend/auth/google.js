@@ -2,13 +2,14 @@ const passport = require("passport");
 const googleStrategy = require("passport-google-oauth20").Strategy;
 const User = require("../models/USerModel");
 require("dotenv").config();
+const jwt = require("jsonwebtoken");
 
 passport.use(
     new googleStrategy(
         {
             clientID : process.env.GOOGLE_CLIENT_ID,
             clientSecret : process.env.GOOGLE_CLIENT_SECRET,
-            callbackURL : `${process.env.BASE_URI}/auth/google/callback`
+            callbackURL : `https://smartest-2nta.onrender.com/auth/google/callback`
         },
         async (accessToken, refreshToken, profile, done)=>{
             try{
@@ -26,9 +27,26 @@ passport.use(
                 });
             }
             const savedUser = await user.save();
+            const payload = {
+                id: savedUser._id,
+                username: savedUser.username,
+                email: savedUser.email
+            };
+            const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "7d" });
+            savedUser.token = token;
+            await savedUser.save();
+            done(null, savedUser);
             return done(null, savedUser);
+
         }catch(err){
             return done(err,null);
         }
     })
 )
+passport.serializeUser((user,done)=>{
+    done(null,user.id);
+})
+passport.deserializeUser(async(id , done)=>{
+    const user = await User.findById(id);
+    done(null,user);
+})

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState , useEffect} from 'react';
 import Navbar from './Navbar';
+import { useNavigate } from 'react-router-dom';
 import PastContests from './PastContests';
 import ScheduledContests from './ScheduledContests';
 import RunningContests from './RunningContests';
@@ -7,7 +8,19 @@ import Leaderboard from './Leaderboard';
 
 const Home = () => {
   const [activeSection, setActiveSection] = useState('');
-
+  const navigate = useNavigate();
+  useEffect(() => {
+    const token = new URLSearchParams(window.location.search).get('token');
+    if (!token) {
+      navigate('/login');
+    } else {
+      localStorage.setItem('auth_token', token);
+      // Optionally, you can verify the token here or fetch user data
+      // For example, you can make an API call to fetch user profile
+      // fetchUserProfile(token);
+      window.history.replaceState({}, document.title, "/Home");
+    }
+  }, [navigate]);
   const renderSection = () => {
     switch (activeSection) {
       case 'past':
