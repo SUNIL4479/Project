@@ -28,7 +28,7 @@
     app.use(cors({
         origin: [
             process.env.FRONTEND_URL,
-            'https://contest-platform-woad.vercel.app',
+            'https://project-eta-pink.vercel.app',
             'http://localhost:3000'
         ],
         credentials: true,

@@ -73,7 +73,7 @@ export default function Dashboard() {
         </div>
 
         {/* Scrollable Page Content */}
-        <div className="flex-1 overflow-y-auto mt-[72px] p-6 md:ml-64">
+        <div className="flex-1 overflow-y-auto mt-[72px] p-6 md:ml-64 text" style={{ background: 'linear-gradient(45deg, white 50%, black 50%)' }}>
           {/* The create contest or other dashboard pages will render here */}
           <Outlet />
         </div>
