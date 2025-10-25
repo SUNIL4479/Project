@@ -16,7 +16,17 @@ import Home from './components/Home-Dashboard/Home';
 import LoginPage from './components/LoginPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import CreateContest from "./components/Contests/createContest"
+import { useEffect } from "react";
 function App() {
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+    if (token) {
+      localStorage.setItem("auth_token", token);
+      console.log("✅ Token saved to localStorage:", token);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
   return (
     <GoogleOAuthProvider clientId={process.env.REACT_APP_GOOGLE_CLIENT_ID}>
       <Router>
