@@ -6,7 +6,7 @@ const ProtectedRoute = ({ children }) => {
   console.log('ProtectedRoute: token =', token); // Debug log
   if (!token) {
     console.log('ProtectedRoute: No token, redirecting to /login'); // Debug log
-    return <Navigate to="/login" />;
+    return <Navigate to="/login" replace />;
   }
   console.log('ProtectedRoute: Token found, rendering children'); // Debug log
   return children;

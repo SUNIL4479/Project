@@ -11,14 +11,18 @@ const Home = () => {
   const navigate = useNavigate();
   useEffect(() => {
     const token = new URLSearchParams(window.location.search).get('token');
-    if (!token) {
-      navigate('/login');
-    } else {
+    if (token) {
       localStorage.setItem('auth_token', token);
       // Optionally, you can verify the token here or fetch user data
       // For example, you can make an API call to fetch user profile
       // fetchUserProfile(token);
       window.history.replaceState({}, document.title, "/Home");
+
+    } else {
+        const existing = localStorage.getItem('auth_token');
+        if (!existing) {
+            navigate('/login');
+        } 
     }
   }, [navigate]);
   const renderSection = () => {

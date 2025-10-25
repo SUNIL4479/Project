@@ -45,10 +45,18 @@
     })
     app.get("/auth/google", passport.authenticate("google",{scope:["profile","email"], prompt: "select_account"}))
     app.get("/auth/google/callback", passport.authenticate("google",{session:false, failureRedirect : (process.env.FRONTEND_URL+"/login")}),
-        (req, res) => {
-            const token = req.user.token;
-            res.redirect(`${process.env.FRONTEND_URL}/Home?token=${token}`); // Redirect to frontend with token
-        }    
+       async (req, res) => {
+        try{
+            const payload = {
+                id: req.user._id,
+                username: req.user.username,
+                email: req.user.email
+            };
+            const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "7d" });
+            res.redirect(`${process.env.FRONTEND_URL}/Home?token=${token}`);
+            console.log("Google authentication successful, redirecting to frontend with token");
+        }catch(err){console.error("Error during Google authentication callback:", err);}        
+    }    
 );
     function authenticateToken(req,res,next){
         const authHeader = req.headers["authorization"];

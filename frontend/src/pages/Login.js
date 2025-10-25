@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useGoogleLogin } from '@react-oauth/google';
 const LoginModal = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
@@ -12,6 +11,18 @@ const LoginModal = ({ isOpen, onClose }) => {
   const [profilePicFile, setProfilePicFile] = useState(null);
   const backendBase = process.env.REACT_APP_API_URL
   const [errors, setErrors] = useState({});
+  useEffect(() => {
+  // Extract token from URL if present (after Google login)
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('token');
+
+  if (token) {
+    localStorage.setItem('auth_token', token);
+    console.log('Token received and saved:', token);
+    window.history.replaceState({}, document.title, '/Home'); // remove ?token=... from URL
+  }
+}, []);
+
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const githubLogin = () => {
     const clientId = 'Ov23liakOWNLgpXCXhrY';
@@ -82,10 +93,24 @@ const LoginModal = ({ isOpen, onClose }) => {
           });
           const data = await response.json();
           console.log('Login data:', data);
+          //google-login
+          const googleLoginResponse = await fetch(`${backendBase}/api/google-login`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: formData.email,
+              username: formData.username
+            }),
+          });
+          const data1 = await googleLoginResponse.json();
+          console.log('Login data:', data);
           if (response.ok) {
             localStorage.setItem('auth_token', data.token);
+            console.log('Token saved:', data.token);
             onClose();
-            navigate('/home');
+            navigate('/Home');
           } else {
             setErrors({ ...errors, api: data.message || 'Login failed' });
           }
