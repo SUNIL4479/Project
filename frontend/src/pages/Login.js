@@ -12,16 +12,26 @@ const LoginModal = ({ isOpen, onClose }) => {
   const backendBase = process.env.REACT_APP_API_URL
   const [errors, setErrors] = useState({});
   useEffect(() => {
-  // Extract token from URL if present (after Google login)
-  const params = new URLSearchParams(window.location.search);
-  const token = params.get('token');
+    // Check both URL parameters and session storage for tokens
+    const params = new URLSearchParams(window.location.search);
+    const urlToken = params.get('token');
+    const googleToken = localStorage.getItem('google_auth_token');
+    
+    console.log('Checking tokens - URL:', urlToken, 'Google:', googleToken);
 
-  if (token) {
-    localStorage.setItem('auth_token', token);
-    console.log('Token received and saved:', token);
-    window.history.replaceState({}, document.title, '/Home'); // remove ?token=... from URL
-  }
-}, []);
+    if (urlToken) {
+      // If token is in URL, save it and clean up the URL
+      localStorage.setItem('auth_token', urlToken);
+      console.log('Token from URL saved:', urlToken);
+      window.history.replaceState({}, document.title, '/Home');
+      navigate('/Home');
+    } else if (googleToken) {
+      // If Google token exists, use it
+      localStorage.setItem('auth_token', googleToken);
+      console.log('Using Google token:', googleToken);
+      navigate('/Home');
+    }
+  }, [navigate]);
 
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const githubLogin = () => {

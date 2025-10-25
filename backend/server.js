@@ -23,18 +23,34 @@
     const upload = multer({ storage: storage });
 
     app.use(express.json());
+    
+    // Enhanced CORS configuration for deployment
     app.use(cors({
-        origin : process.env.FRONTEND_URL,
-        credentials : true
-    }))
-    app.use(express.json());
+        origin: [
+            process.env.FRONTEND_URL,
+            'https://contest-platform-woad.vercel.app',
+            'http://localhost:3000'
+        ],
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept'],
+        exposedHeaders: ['Content-Range', 'X-Content-Range'],
+        maxAge: 86400 // Cache preflight requests for 24 hours
+    }));
     app.use(session({
-        secret : process.env.GOOGLE_CLIENT_SECRET,
-        resave : false,
-        saveUninitialized : false,
-    }))
+        secret: process.env.SESSION_SECRET || process.env.JWT_SECRET,
+        resave: false,
+        saveUninitialized: false,
+        cookie: {
+            secure: process.env.NODE_ENV === 'production',
+            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        }
+    }));
     app.use(passport.initialize());
     app.use(passport.session());
+    
+    // Serve uploaded files
+    app.use('/uploads', express.static('uploads'));
 
     mongoose.connect(process.env.MONGO_URL,{
         useNewUrlParser : true,
@@ -44,20 +60,141 @@
         res.send("Hello World!")
     })
     app.get("/auth/google", passport.authenticate("google",{scope:["profile","email"], prompt: "select_account"}))
-    app.get("/auth/google/callback", passport.authenticate("google",{session:false, failureRedirect : (process.env.FRONTEND_URL+"/login")}),
-       async (req, res) => {
-        try{
-            const payload = {
-                id: req.user._id,
-                username: req.user.username,
-                email: req.user.email
-            };
+    app.get("/auth/google/callback", passport.authenticate("google", { session: false, failureRedirect: `${process.env.FRONTEND_URL}/login` }),
+        async (req, res) => {
+            try {
+                const { token, user } = req.user;
+                // Redirect to frontend with token
+                res.redirect(`${process.env.FRONTEND_URL}/auth/success?token=${token}`);
+            } catch (error) {
+                console.error("Callback error:", error);
+                res.redirect(`${process.env.FRONTEND_URL}/login?error=auth_failed`);
+            }
+        }
+    );
+
+    // Protected route for getting user profile
+    const auth = require('./middleware/auth');
+    
+    app.get("/api/profile", auth, async (req, res) => {
+        try {
+            const user = await User.findById(req.user._id).select('-password');
+            res.json(user);
+        } catch (error) {
+            console.error("Profile fetch error:", error);
+            res.status(500).json({ error: "Error fetching profile" });
+        }
+    });
+
+    // Update profile route
+    app.put("/api/profile", auth, upload.single('profilePic'), async (req, res) => {
+        try {
+            const updates = req.body;
+            
+            // If profile picture was uploaded
+            if (req.file) {
+                updates.ProfilePic = '/uploads/' + req.file.filename;
+            }
+
+            // Remove sensitive fields
+            delete updates.password;
+            delete updates.googleId;
+
+            const user = await User.findByIdAndUpdate(
+                req.user._id,
+                { $set: updates },
+                { new: true, runValidators: true }
+            ).select('-password');
+
+            res.json(user);
+        } catch (error) {
+            console.error("Profile update error:", error);
+            res.status(500).json({ error: "Error updating profile" });
+        }
+    });
+
+    // Regular login route
+    app.post("/api/login", async (req, res) => {
+        try {
+            const { email, password } = req.body;
+            
+            const user = await User.findOne({ email });
+            if (!user) {
+                return res.status(401).json({ error: "Invalid credentials" });
+            }
+
+            const isMatch = await bcrypt.compare(password, user.password);
+            if (!isMatch) {
+                return res.status(401).json({ error: "Invalid credentials" });
+            }
+
+            const payload = { id: user._id, email: user.email };
             const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "7d" });
-            res.redirect(`${process.env.FRONTEND_URL}/Home?token=${token}`);
-            console.log("Google authentication successful, redirecting to frontend with token");
-        }catch(err){console.error("Error during Google authentication callback:", err);}        
-    }    
-);
+
+            res.json({
+                token,
+                user: {
+                    id: user._id,
+                    email: user.email,
+                    username: user.username,
+                    ProfilePic: user.ProfilePic
+                }
+            });
+        } catch (error) {
+            console.error("Login error:", error);
+            res.status(500).json({ error: "Error during login" });
+        }
+    });
+
+    // Registration route
+    app.post("/api/register", upload.single('profilePic'), async (req, res) => {
+        try {
+            const { username, email, password, college } = req.body;
+            
+            // Check if user already exists
+            const existingUser = await User.findOne({ 
+                $or: [{ email }, { username }] 
+            });
+            
+            if (existingUser) {
+                return res.status(400).json({ 
+                    error: "Email or username already exists" 
+                });
+            }
+
+            // Hash password
+            const hashedPassword = await bcrypt.hash(password, 10);
+
+            // Create new user
+            const user = new User({
+                username,
+                email,
+                password: hashedPassword,
+                college,
+                ProfilePic: req.file ? '/uploads/' + req.file.filename : undefined
+            });
+
+            await user.save();
+
+            // Create token
+            const payload = { id: user._id, email: user.email };
+            const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "7d" });
+
+            res.status(201).json({
+                token,
+                user: {
+                    id: user._id,
+                    email: user.email,
+                    username: user.username,
+                    ProfilePic: user.ProfilePic
+                }
+            });
+        } catch (error) {
+            console.error("Registration error:", error);
+            res.status(500).json({ error: "Error during registration" });
+        }
+    });
+                
     function authenticateToken(req,res,next){
         const authHeader = req.headers["authorization"];
         const token = authHeader && authHeader.split(" ")[1] || req.query.token;

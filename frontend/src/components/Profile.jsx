@@ -6,7 +6,7 @@ export default function Profile() {
     useEffect(() => {
       const token = localStorage.getItem("auth_token");
       if (token) {
-        const backend = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+        const backend = "http://localhost:5000";
         axios.get(`${backend}/profile`, {
           headers: { Authorization: `Bearer ${token}` }
         }).then(res => {
