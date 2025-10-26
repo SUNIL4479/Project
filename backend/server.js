@@ -1,5 +1,5 @@
     require('dotenv').config();
-    const express = require("express")
+    const express = require("express");
     const session = require("express-session");
     const mongoose = require("mongoose");
     const passport = require("passport");
@@ -8,19 +8,43 @@
     const multer = require("multer");
     const bcrypt = require("bcrypt");
     const path = require("path");
+    const fs = require('fs');
     const User = require("./models/USerModel")
     require("./auth/google")
     const app = express();
     const port = process.env.PORT || 5000   
+    // Ensure uploads directory exists
+    const uploadsDir = path.join(__dirname, 'uploads');
+    if (!fs.existsSync(uploadsDir)){
+        fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
     const storage = multer.diskStorage({
         destination: (req, file, cb) => {
-            cb(null, 'uploads/');
+            cb(null, uploadsDir);
         },
         filename: (req, file, cb) => {
-            cb(null, Date.now() + path.extname(file.originalname));
+            // Sanitize filename
+            const safeName = Date.now() + '-' + file.originalname.replace(/[^a-zA-Z0-9.]/g, '_');
+            cb(null, safeName);
         }
     });
-    const upload = multer({ storage: storage });
+
+    const fileFilter = (req, file, cb) => {
+        // Accept images only
+        if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
+            return cb(new Error('Only image files are allowed!'), false);
+        }
+        cb(null, true);
+    };
+
+    const upload = multer({ 
+        storage: storage,
+        fileFilter: fileFilter,
+        limits: {
+            fileSize: 5 * 1024 * 1024 // 5MB limit
+        }
+    });
 
     app.use(express.json());
     
@@ -147,19 +171,82 @@
     });
 
     // Registration route
-    app.post("/api/register", upload.single('profilePic'), async (req, res) => {
-        try {
-            const { username, email, password, college } = req.body;
-            
-            // Check if user already exists
-            const existingUser = await User.findOne({ 
-                $or: [{ email }, { username }] 
+    // Multer error handling middleware
+    const handleMulterError = (err, req, res, next) => {
+        if (err instanceof multer.MulterError) {
+            // A Multer error occurred when uploading.
+            return res.status(400).json({
+                error: err.message || 'File upload error',
+                code: 'UPLOAD_ERROR'
             });
+        } else if (err) {
+            // An unknown error occurred when uploading.
+            return res.status(500).json({
+                error: 'Unknown upload error occurred',
+                code: 'UNKNOWN_ERROR'
+            });
+        }
+        next();
+    };
+
+    app.post("/api/register", upload.single('profilePic'), handleMulterError, async (req, res) => {
+        try {
+            console.log('Registration request received');
+            console.log('Request body:', req.body);
+            console.log('File:', req.file);
+
+            const { username, email, password } = req.body;
             
-            if (existingUser) {
-                return res.status(400).json({ 
-                    error: "Email or username already exists" 
+            // Validate required fields
+            if (!username || !email || !password) {
+                const errorMsg = {
+                    error: "All fields are required",
+                    missing: {
+                        username: !username,
+                        email: !email,
+                        password: !password
+                    }
+                };
+                console.log('Validation error:', errorMsg);
+                return res.status(400).json(errorMsg);
+            }
+
+            // Validate email format
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                return res.status(400).json({
+                    error: "Invalid email format"
                 });
+            }
+
+            // Validate password strength
+            if (password.length < 6) {
+                return res.status(400).json({
+                    error: "Password must be at least 6 characters long"
+                });
+            }
+
+            try {
+                // Check if user already exists
+                const existingUser = await User.findOne({
+                $or: [{ email }, { username }]
+            });
+
+            if (existingUser) {
+                console.log('User already exists:', {
+                    email: existingUser.email,
+                    username: existingUser.username
+                });
+                return res.status(400).json({
+                    error: "Email or username already exists"
+                });
+            }
+
+            // Process profile picture
+            let profilePicPath = null;
+            if (req.file) {
+                profilePicPath = `/uploads/${req.file.filename}`;
+                console.log('Profile picture saved:', profilePicPath);
             }
 
             // Hash password
@@ -170,17 +257,23 @@
                 username,
                 email,
                 password: hashedPassword,
-                college,
-                ProfilePic: req.file ? '/uploads/' + req.file.filename : undefined
+                ProfilePic: profilePicPath
             });
 
             await user.save();
+            console.log('New user created:', {
+                id: user._id,
+                email: user.email,
+                username: user.username
+            });
 
             // Create token
             const payload = { id: user._id, email: user.email };
-            const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "7d" });
+            const token = jwt.sign(payload, process.env.JWT_SECRET || 'fallback-secret-key', { expiresIn: "7d" });
 
-            res.status(201).json({
+            // Send successful response
+            return res.status(201).json({
+                success: true,
                 token,
                 user: {
                     id: user._id,
@@ -189,6 +282,13 @@
                     ProfilePic: user.ProfilePic
                 }
             });
+            } catch (dbError) {
+                console.error('Database operation failed:', dbError);
+                return res.status(500).json({
+                    error: "Failed to create user account",
+                    details: process.env.NODE_ENV === 'development' ? dbError.message : undefined
+                });
+            }
         } catch (error) {
             console.error("Registration error:", error);
             res.status(500).json({ error: "Error during registration" });
@@ -215,90 +315,7 @@
         }
     })
 
-    app.post("/api/register", upload.single('profilePic'), async (req, res) => {
-        try {
-            const { username, email, password } = req.body;
-            const profilePic = req.file ? req.file.path : null;
 
-            // Check if user already exists
-            const existingUser = await User.findOne({ $or: [{ email }, { username }] });
-            if (existingUser) {
-                return res.status(400).json({ message: "User already exists" });
-            }
-
-            // Hash password
-            const hashedPassword = await bcrypt.hash(password, 10);
-
-            // Create new user
-            const newUser = new User({
-                googleId : "",
-                username,
-                email,
-                password: hashedPassword,
-                ProfilePic: profilePic
-            });
-
-            await newUser.save();
-            res.status(201).json({ message: "User registered successfully" });
-        } catch (error) {
-            console.error(error);
-            res.status(500).json({ message: "Server error" });
-        }
-    });
-    app.post("/api/login", async (req, res) => {
-        try {
-            const { email, password } = req.body;
-
-            // Find user by email
-            const user = await User.findOne({ email });
-            if (!user) {
-                return res.status(400).json({ message: "Invalid credentials" });
-            }
-
-            // Check password
-            const isMatch = await bcrypt.compare(password, user.password);
-            if (!isMatch) {
-                return res.status(400).json({ message: "Invalid credentials" });
-            }
-
-            // Generate JWT token
-            const payload = { id: user._id, username: user.username, email: user.email };
-            const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "7d" });
-
-            res.json({ message: "Login successful", token });
-        } catch (error) {
-            console.error(error);
-            res.status(500).json({ message: "Server error" });
-        }
-    });
-
-    app.post("/api/google-login", async (req, res) => {
-        try {
-            const { googleId, username, email, profilePic } = req.body;
-
-            // Check if user already exists by googleId
-            let user = await User.findOne({ googleId });
-            if (!user) {
-                // Create new user
-                user = new User({
-                    googleId,
-                    username,
-                    email,
-                    ProfilePic: profilePic
-                });
-                await user.save();
-            }
-
-            // Generate JWT token
-            const payload = { id: user._id, username: user.username, email: user.email };
-            const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "7d" });
-
-            res.json({ message: "Google login successful", token });
-        } catch (error) {
-            console.error(error);
-            res.status(500).json({ message: "Server error" });
-        }
-    });
     app.listen(port,"0.0.0.0",()=>{
         console.log(`Server is running on port ${port}`);
     })
