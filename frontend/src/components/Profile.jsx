@@ -2,8 +2,6 @@ import { useState, useEffect } from "react";
 import axios from "axios"
 export default function Profile() {
   const [profile, setProfile] = useState(null);
-
-    useEffect(() => {
       try{
           const token = localStorage.getItem("auth_token");
           if (token) {
@@ -16,7 +14,52 @@ export default function Profile() {
           }catch(e){
             console.error("Failed to fetch profile", e);
           }
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+    useEffect(() => {
+      const token = localStorage.getItem("auth_token");
+      if (token) {
+        const backend = process.env.REACT_APP_API_URL || "http://localhost:5000";
+        axios.get(`${backend}/api/profile`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).then(res => {
+          setProfile(res.data);
+          setLoading(false);
+        }).catch(err => {
+          console.error("Failed to fetch profile", err);
+          setError("Failed to load profile");
+          setLoading(false);
+        });
+      } else {
+        setError("No authentication token found");
+        setLoading(false);
+      }
+
     }, []);
+  if (loading) {
+    return (
+      <div className="p-6">
+        <h1 className="text-2xl font-semibold mb-4">My Profile</h1>
+        <div className="bg-purple p-4 rounded shadow">
+          <p>Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <h1 className="text-2xl font-semibold mb-4">My Profile</h1>
+        <div className="bg-red-600 p-4 rounded shadow">
+          <p className="text-white">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6">
       <h1 className="text-2xl font-semibold mb-4">My Profile</h1>
