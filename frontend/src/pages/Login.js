@@ -104,6 +104,19 @@ const LoginModal = ({ isOpen, onClose }) => {
           });
           const data = await response.json();
           console.log('Login data:', data);
+          //google-login
+          const googleLoginResponse = await fetch(`${backendBase}/api/google-login`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: formData.email,
+              username: formData.username
+            }),
+          });
+          const data1 = await googleLoginResponse.json();
+          console.log('Login data:', data);
           if (response.ok) {
             localStorage.setItem('auth_token', data.token);
             console.log('Token saved:', data.token);
