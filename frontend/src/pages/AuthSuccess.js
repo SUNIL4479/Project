@@ -18,7 +18,7 @@ export default function AuthSuccess(){
         localStorage.setItem("auth_token",token);
 
         const backend = process.env.REACT_APP_API_URL ;
-       const res = await axios.get(`${backend}/profile`,{
+       const res = await axios.get(`${backend}/api/profile`,{
             headers : {Authorization : `Bearer ${token}`}
         });
          setProfile(res.data);
