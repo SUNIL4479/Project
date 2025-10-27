@@ -190,6 +190,102 @@
         next();
     };
 
+    // Contest Routes
+    app.post("/contests", auth, async (req, res) => {
+        try {
+            console.log('Received contest creation request:', req.body);
+            const { title, description, startTime, endTime, problems } = req.body;
+
+            // Detailed validation
+            const validationErrors = [];
+            if (!title) validationErrors.push('Title is required');
+            if (!description) validationErrors.push('Description is required');
+            if (!startTime) validationErrors.push('Start time is required');
+            if (!endTime) validationErrors.push('End time is required');
+            if (!problems || !Array.isArray(problems)) validationErrors.push('Problems array is required');
+            if (problems && problems.length === 0) validationErrors.push('At least one problem is required');
+
+            if (validationErrors.length > 0) {
+                console.log('Validation errors:', validationErrors);
+                return res.status(400).json({
+                    error: "Validation failed",
+                    details: validationErrors
+                });
+            }
+
+            // Validate dates
+            const startDateTime = new Date(startTime);
+            const endDateTime = new Date(endTime);
+            const now = new Date();
+
+            if (isNaN(startDateTime.getTime())) {
+                return res.status(400).json({
+                    error: "Invalid start time format"
+                });
+            }
+
+            if (isNaN(endDateTime.getTime())) {
+                return res.status(400).json({
+                    error: "Invalid end time format"
+                });
+            }
+
+            if (endDateTime <= startDateTime) {
+                return res.status(400).json({
+                    error: "End time must be after start time"
+                });
+            }
+
+            // Create contest with proper schema mapping
+            const contest = new Contest({
+                title,
+                description,
+                startTime: startDateTime,
+                endTime: endDateTime,
+                problems: problems.map(problem => ({
+                    title: problem.title,
+                    description: problem.description,
+                    inputFormat: problem.inputFormat,
+                    outputFormat: problem.outputFormat,
+                    constraints: problem.constraints,
+                    sampleInput: problem.sampleInput,
+                    sampleOutput: problem.sampleOutput,
+                    testCases: problem.testCases.map(tc => ({
+                        input: tc.input,
+                        output: tc.output
+                    }))
+                })),
+                createdBy: req.user._id // Match the schema field name
+            });
+
+            console.log('Attempting to save contest:', contest);
+            await contest.save();
+            console.log('Contest created successfully:', contest._id);
+
+            res.status(201).json({
+                success: true,
+                contest: {
+                    id: contest._id,
+                    title: contest.title,
+                    startTime: contest.startTime,
+                    endTime: contest.endTime
+                }
+            });
+        } catch (error) {
+            console.error('Contest creation error:', error);
+            if (error.name === 'ValidationError') {
+                return res.status(400).json({
+                    error: "Validation failed",
+                    details: Object.values(error.errors).map(err => err.message)
+                });
+            }
+            res.status(500).json({
+                error: "Failed to create contest",
+                message: error.message
+            });
+        }
+    });
+
     app.post("/api/register", upload.single('profilePic'), handleMulterError, async (req, res) => {
         try {
             console.log('Registration request received');

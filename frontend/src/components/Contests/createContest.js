@@ -65,21 +65,170 @@ export default function CreateContest() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     try {
-      const token = localStorage.getItem('auth_token');
-      const backend = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-      await axios.post(`${backend}/contests`, contestData, {
-        headers: { Authorization: `Bearer ${token}` },
+      // Client-side validation
+      const validationErrors = [];
+
+      if (!contestData.title.trim()) validationErrors.push('Contest title is required');
+      if (!contestData.description.trim()) validationErrors.push('Contest description is required');
+      if (!contestData.startTime) validationErrors.push('Start time is required');
+      if (!contestData.endTime) validationErrors.push('End time is required');
+      
+      if (contestData.problems.length === 0) {
+        validationErrors.push('Please add at least one problem');
+      }
+
+      // Validate each problem
+      contestData.problems.forEach((problem, index) => {
+        if (!problem.title.trim()) {
+          validationErrors.push(`Problem ${index + 1}: Title is required`);
+        }
+        if (!problem.description.trim()) {
+          validationErrors.push(`Problem ${index + 1}: Description is required`);
+        }
+        if (!problem.testCases || problem.testCases.length === 0) {
+          validationErrors.push(`Problem ${index + 1}: At least one test case is required`);
+        } else {
+          problem.testCases.forEach((testCase, tIndex) => {
+            if (!testCase.input.trim() || !testCase.output.trim()) {
+              validationErrors.push(`Problem ${index + 1}, Test Case ${tIndex + 1}: Both input and output are required`);
+            }
+          });
+        }
       });
+
+      if (validationErrors.length > 0) {
+        alert(validationErrors.join('\n'));
+        return;
+      }
+
+      // Format dates
+      const startDateTime = new Date(contestData.startTime);
+      const endDateTime = new Date(contestData.endTime);
+
+      // Validate dates
+      if (startDateTime <= new Date()) {
+        alert('Start time must be in the future');
+        return;
+      }
+
+      if (endDateTime <= startDateTime) {
+        alert('End time must be after start time');
+        return;
+      }
+
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        alert('Please log in to create a contest');
+        navigate('/login');
+        return;
+      }
+
+      const backend = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      
+      // Prepare contest data
+      const contestPayload = {
+        ...contestData,
+        startTime: startDateTime.toISOString(),
+        endTime: endDateTime.toISOString(),
+        problems: contestData.problems.map(problem => ({
+          title: problem.title,
+          description: problem.description,
+          inputFormat: problem.inputFormat || '',
+          outputFormat: problem.outputFormat || '',
+          constraints: problem.constraints || '',
+          sampleInput: problem.sampleInput || '',
+          sampleOutput: problem.sampleOutput || '',
+          testCases: problem.testCases.map(tc => ({
+            input: tc.input,
+            output: tc.output
+          }))
+        }))
+      };
+
+      console.log('Sending contest data:', contestPayload);
+
+      const response = await axios.post(`${backend}/contests`, contestPayload, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('Contest created successfully:', response.data);
+      alert('Contest created successfully!');
       navigate('/dashboard/created');
     } catch (error) {
-      console.error('Failed to create contest', error);
+      console.error('Failed to create contest:', error);
+      if (error.response?.data?.details) {
+        alert('Validation errors:\n' + error.response.data.details.join('\n'));
+      } else if (error.response?.data?.error) {
+        alert(error.response.data.error);
+      } else {
+        alert('Failed to create contest. Please try again.');
+      }
+    }
+
+    try {
+      // Validate contest times
+      const startDateTime = new Date(contestData.startTime);
+      const endDateTime = new Date(contestData.endTime);
+      const now = new Date();
+
+      if (startDateTime < now) {
+        alert('Contest start time must be in the future');
+        return;
+      }
+
+      if (endDateTime <= startDateTime) {
+        alert('Contest end time must be after start time');
+        return;
+      }
+
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        alert('Please log in to create a contest');
+        navigate('/login');
+        return;
+      }
+
+      const backend = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      console.log('Sending contest data:', contestData);
+      
+      const response = await axios.post(`${backend}/contests`, 
+        {
+          ...contestData,
+          startTime: startDateTime.toISOString(),
+          endTime: endDateTime.toISOString()
+        },
+        {
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+        }
+      );
+
+      console.log('Contest created successfully:', response.data);
+      alert('Contest created successfully!');
+      navigate('/dashboard/created');
+    } catch (error) {
+      console.error('Failed to create contest:', error);
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+        alert(error.response.data.error || error.response.data.message || 'Failed to create contest');
+      } else if (error.request) {
+        alert('Network error. Please check your connection and try again.');
+      } else {
+        alert('Failed to create contest. Please try again.');
+      }
     }
   };
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6 text-orange-900">Create New Contest</h1>
+      <h1 className="text-3xl font-bold mb-6 text-orange-900">Create New Contests</h1>
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Contest Details */}
         <div className="bg-black p-6 rounded-lg shadow-md">
