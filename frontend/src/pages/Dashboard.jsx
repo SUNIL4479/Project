@@ -15,8 +15,12 @@ export default function Dashboard() {
       axios
         .get(`${backend}/profile`, {
           headers: { Authorization: `Bearer ${token}` },
+        }).then((res)=>{
+           setProfile(res.data);
+        }).catch((err)=>{
+          console.log(err);
         })
-          setProfile(res.data);
+         ;
       }
     }catch(e){
       console.error("Failed to fetch profile", e);
