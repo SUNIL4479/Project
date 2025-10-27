@@ -2,19 +2,20 @@ import { useState, useEffect } from "react";
 import axios from "axios"
 export default function Profile() {
   const [profile, setProfile] = useState(null);
-  
+
     useEffect(() => {
-      const token = localStorage.getItem("auth_token");
-      if (token) {
-        const backend = process.env.BASE_URI || "http://localhost:5000";
-        axios.get(`${backend}/profile`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }).then(res => {
-          setProfile(res.data);
-        }).catch(err => {
-          console.error("Failed to fetch profile", err);
-        });
-      }
+      try{
+          const token = localStorage.getItem("auth_token");
+          if (token) {
+            const backend = process.env.REACT_APP_API_URL || "http://localhost:5000";
+           const res = axios.get(`${backend}/profile`, {
+                headers: { Authorization: `Bearer ${token}` },
+              })
+                setProfile(res.data);
+            }
+          }catch(e){
+            console.error("Failed to fetch profile", e);
+          }
     }, []);
   return (
     <div className="p-6">
@@ -33,7 +34,7 @@ export default function Profile() {
         <h2 >Email</h2>
         <div className="lg:w-1/2 h-12 py-2 px-3 text-white bg-black mb-3 rounded-3xl border border-4 border-gray">{profile ? profile.email:""}</div>
         <h2 >College</h2>
-        <div className="lg:w-1/2 h-12 py-2 px-3 text-white bg-black mb-6 rounded-3xl border border-4 border-gray">JohnDoe College</div>   
+        <div className="lg:w-1/2 h-12 py-2 px-3 text-white bg-black mb-6 rounded-3xl border border-4 border-gray">JohnDoe College</div>
         <div className="lg:w-1/2 text-center"><button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Edit Profile</button></div>
       </div>
     </div>

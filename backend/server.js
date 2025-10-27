@@ -395,19 +395,20 @@
     function authenticateToken(req,res,next){
         const authHeader = req.headers["authorization"];
         const token = authHeader && authHeader.split(" ")[1] || req.query.token;
-        if(!token) return res.sendStatus(401).json({message : "No token provided"});
+        if(!token) return res.status(401).json({message : "No token provided"});
         jwt.verify(token,process.env.JWT_SECRET,(err,user)=>{
-            if(err) return res.sendStatus(403).json({message : "Invalid token"});
+            if(err) return res.status(403).json({message : "Invalid token"});
             req.user = user;
             next();
         });
     }
-    app.get("/profile", authenticateToken, async (req,res)=>{
+    app.get("/api/profile", authenticateToken, async (req,res)=>{
         try{
-            const user = await User.findById(req.user.id).select("-__v");
+            const user = await User.findById(req.user.id).select("-password -__v");
             if(!user) return res.status(404).json({message : "User not found"});
             res.json(user);
         }catch(err){
+            console.error("Profile fetch error:", err);
             res.status(500).json({message : "Server error"});
         }
     })
@@ -460,6 +461,35 @@
             res.json(formattedContests);
         } catch (error) {
             console.error("Error fetching scheduled contests:", error);
+            res.status(500).json({ error: "Error fetching contests" });
+        }
+    });
+
+    // Get Running Contests (currently active contests)
+    app.get("/api/contests/running", async (req, res) => {
+        try {
+            const now = new Date();
+            const contests = await Contest.find({
+                startTime: { $lte: now },
+                endTime: { $gte: now }
+            })
+            .populate('createdBy', 'username')
+            .sort({ startTime: 1 })
+            .select('title description startTime endTime problems createdBy');
+
+            const formattedContests = contests.map(contest => ({
+                id: contest._id,
+                name: contest.title,
+                description: contest.description,
+                startTime: contest.startTime,
+                endTime: contest.endTime,
+                problemsCount: contest.problems.length,
+                createdBy: contest.createdBy?.username || 'Unknown'
+            }));
+
+            res.json(formattedContests);
+        } catch (error) {
+            console.error("Error fetching running contests:", error);
             res.status(500).json({ error: "Error fetching contests" });
         }
     });
@@ -542,6 +572,95 @@
         } catch (error) {
             console.error("Error creating contest:", error);
             res.status(500).json({ error: "Error creating contest" });
+        }
+    });
+
+    // Get Contest by ID Route
+    app.get("/api/contests/:id", auth, async (req, res) => {
+        try {
+            const contest = await Contest.findById(req.params.id);
+            if (!contest) {
+                return res.status(404).json({ error: "Contest not found" });
+            }
+
+            // Check if contest has started
+            const now = new Date();
+            if (now < contest.startTime) {
+                return res.status(403).json({ error: "Contest has not started yet" });
+            }
+
+            res.json({
+                _id: contest._id,
+                title: contest.title,
+                description: contest.description,
+                startTime: contest.startTime,
+                endTime: contest.endTime,
+                problems: contest.problems.map(problem => ({
+                    title: problem.title,
+                    description: problem.description,
+                    inputFormat: problem.inputFormat,
+                    outputFormat: problem.outputFormat,
+                    constraints: problem.constraints,
+                    sampleInput: problem.sampleInput,
+                    sampleOutput: problem.sampleOutput,
+                    testCases: problem.testCases // Include test cases for judging
+                })),
+                createdBy: contest.createdBy,
+                createdAt: contest.createdAt
+            });
+        } catch (error) {
+            console.error("Error fetching contest:", error);
+            res.status(500).json({ error: "Error fetching contest" });
+        }
+    });
+
+    // Submit Code Route
+    app.post("/api/contests/:contestId/submit", auth, async (req, res) => {
+        try {
+            const { problemIndex, code, language } = req.body;
+
+            if (problemIndex === undefined || !code || !language) {
+                return res.status(400).json({ error: "Problem index, code, and language are required" });
+            }
+
+            const contest = await Contest.findById(req.params.contestId);
+            if (!contest) {
+                return res.status(404).json({ error: "Contest not found" });
+            }
+
+            // Check if contest is active
+            const now = new Date();
+            if (now < contest.startTime || now > contest.endTime) {
+                return res.status(403).json({ error: "Contest is not active" });
+            }
+
+            if (problemIndex < 0 || problemIndex >= contest.problems.length) {
+                return res.status(400).json({ error: "Invalid problem index" });
+            }
+
+            const problem = contest.problems[problemIndex];
+
+            // Simple code execution simulation (in a real app, you'd use a judge system)
+            let status = "Wrong Answer";
+            try {
+                // For demo purposes, we'll just check if the code contains certain keywords
+                // In a real implementation, you'd run the code against test cases
+                if (code.includes("console.log") || code.includes("print")) {
+                    status = "Accepted";
+                }
+            } catch (error) {
+                status = "Runtime Error";
+            }
+
+            res.json({
+                message: "Code submitted successfully",
+                status,
+                problemIndex,
+                language
+            });
+        } catch (error) {
+            console.error("Error submitting code:", error);
+            res.status(500).json({ error: "Error submitting code" });
         }
     });
 
