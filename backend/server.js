@@ -53,7 +53,7 @@
     app.use(cors({
         origin: [
             process.env.FRONTEND_URL,
-            'https://project-eta-pink.vercel.app',
+            'https://project-w79n-c4sl6sglg-sunil-kumars-projects-0096683d.vercel.app',
             'http://localhost:3000'
         ],
         credentials: true,
@@ -101,15 +101,16 @@
     // Protected route for getting user profile
     const auth = require('./middleware/auth');
     
-    app.get("/api/profile", auth, async (req, res) => {
-        try {
-            const user = await User.findById(req.user._id).select('-password');
-            res.json(user);
-        } catch (error) {
-            console.error("Profile fetch error:", error);
-            res.status(500).json({ error: "Error fetching profile" });
-        }
-    });
+  app.get("/api//profile", authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 
     // Update profile route
     app.put("/api/profile", auth, upload.single('profilePic'), async (req, res) => {
