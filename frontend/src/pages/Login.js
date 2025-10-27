@@ -134,7 +134,7 @@ const LoginModal = ({ isOpen, onClose }) => {
               headers: {
                 // Don't set Content-Type header when sending FormData
                 // Let the browser set it automatically with the correct boundary
-                'Accept': 'application/json'
+                'Content-Type': 'application/json'
               },
             });
             

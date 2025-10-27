@@ -67,7 +67,7 @@ export default function CreateContest() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('auth_token');
-      const backend = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+      const backend = process.env.REACT_APP_API_URL || 'http://localhost:5000';
       await axios.post(`${backend}/contests`, contestData, {
         headers: { Authorization: `Bearer ${token}` },
       });

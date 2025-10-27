@@ -10,6 +10,7 @@
     const path = require("path");
     const fs = require('fs');
     const User = require("./models/USerModel")
+    const Contest = require("./models/ContestModel")
     require("./auth/google")
     const app = express();
     const port = process.env.PORT || 5000   
@@ -199,7 +200,7 @@
             
             // Validate required fields
             if (!username || !email || !password) {
-                const errorMsg = {
+                const errorMsg = { 
                     error: "All fields are required",
                     missing: {
                         username: !username,
@@ -314,7 +315,139 @@
             res.status(500).json({message : "Server error"});
         }
     })
+    // Get Contests Created by User
+    app.get("/api/contests/created", auth, async (req, res) => {
+        try {
+            const contests = await Contest.find({ createdBy: req.user._id })
+                .sort({ createdAt: -1 })
+                .select('title description startTime endTime problems createdAt');
 
+            const formattedContests = contests.map(contest => ({
+                id: contest._id,
+                name: contest.title,
+                description: contest.description,
+                startTime: contest.startTime,
+                endTime: contest.endTime,
+                problemsCount: contest.problems.length,
+                createdAt: contest.createdAt
+            }));
+
+            res.json(formattedContests);
+        } catch (error) {
+            console.error("Error fetching created contests:", error);
+            res.status(500).json({ error: "Error fetching contests" });
+        }
+    });
+
+    // Get Scheduled Contests (future contests)
+    app.get("/api/contests/scheduled", async (req, res) => {
+        try {
+            const now = new Date();
+            const contests = await Contest.find({
+                startTime: { $gt: now }
+            })
+            .populate('createdBy', 'username')
+            .sort({ startTime: 1 })
+            .select('title description startTime endTime problems createdBy');
+
+            const formattedContests = contests.map(contest => ({
+                id: contest._id,
+                name: contest.title,
+                description: contest.description,
+                date: contest.startTime.toISOString().split('T')[0],
+                time: contest.startTime.toTimeString().slice(0, 5),
+                duration: Math.round((contest.endTime - contest.startTime) / (1000 * 60 * 60)) + ' hours',
+                problemsCount: contest.problems.length,
+                createdBy: contest.createdBy?.username || 'Unknown'
+            }));
+
+            res.json(formattedContests);
+        } catch (error) {
+            console.error("Error fetching scheduled contests:", error);
+            res.status(500).json({ error: "Error fetching contests" });
+        }
+    });
+
+    // Create Contest Route
+    app.post("/contests", auth, async (req, res) => {
+        try {
+            const { title, description, startTime, endTime, problems } = req.body;
+
+            // Validate required fields
+            if (!title || !description || !startTime || !endTime) {
+                return res.status(400).json({ error: "Title, description, start time, and end time are required" });
+            }
+
+            // Validate date formats and logic
+            const start = new Date(startTime);
+            const end = new Date(endTime);
+            const now = new Date();
+
+            if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+                return res.status(400).json({ error: "Invalid date format" });
+            }
+
+            if (start >= end) {
+                return res.status(400).json({ error: "Start time must be before end time" });
+            }
+
+            if (start <= now) {
+                return res.status(400).json({ error: "Start time must be in the future" });
+            }
+
+            // Validate problems array
+            if (!Array.isArray(problems) || problems.length === 0) {
+                return res.status(400).json({ error: "At least one problem is required" });
+            }
+
+            // Validate each problem
+            for (let i = 0; i < problems.length; i++) {
+                const problem = problems[i];
+                if (!problem.title || !problem.description) {
+                    return res.status(400).json({ error: `Problem ${i + 1}: Title and description are required` });
+                }
+                if (!Array.isArray(problem.testCases) || problem.testCases.length === 0) {
+                    return res.status(400).json({ error: `Problem ${i + 1}: At least one test case is required` });
+                }
+                // Validate test cases
+                for (let j = 0; j < problem.testCases.length; j++) {
+                    const testCase = problem.testCases[j];
+                    if (!testCase.input || !testCase.output) {
+                        return res.status(400).json({ error: `Problem ${i + 1}, Test Case ${j + 1}: Input and output are required` });
+                    }
+                }
+            }
+
+            // Create new contest
+            const contest = new Contest({
+                title,
+                description,
+                startTime: start,
+                endTime: end,
+                problems,
+                createdBy: req.user._id
+            });
+
+            await contest.save();
+
+            res.status(201).json({
+                message: "Contest created successfully",
+                contest: {
+                    id: contest._id,
+                    title: contest.title,
+                    description: contest.description,
+                    startTime: contest.startTime,
+                    endTime: contest.endTime,
+                    problems: contest.problems,
+                    createdBy: contest.createdBy,
+                    createdAt: contest.createdAt
+                }
+            });
+        } catch (error) {
+            console.error("Error creating contest:", error);
+            res.status(500).json({ error: "Error creating contest" });
+        }
+    });
 
     app.listen(port,"0.0.0.0",()=>{
         console.log(`Server is running on port ${port}`);

@@ -10,5 +10,3 @@ const newUser = new mongoose.Schema({
 },{collection : "ContestPlatform"});
 
 module.exports = mongoose.model("students",newUser);
-
-

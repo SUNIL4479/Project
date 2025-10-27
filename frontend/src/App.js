@@ -11,7 +11,6 @@ import ContestsParticipated from './components/Contestsparticipated';
 import ContestsCreated from './components/Contestscreated';
 import Performance from './components/Performance';
 import AuthSuccess from './pages/AuthSuccess';
-import CreateQuestion from './Questions/CreateQuestion';
 import Home from './components/Home-Dashboard/Home';
 import LoginPage from './components/LoginPage';
 import ProtectedRoute from './components/ProtectedRoute';
