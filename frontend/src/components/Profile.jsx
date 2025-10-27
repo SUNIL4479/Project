@@ -6,7 +6,7 @@ export default function Profile() {
           const token = localStorage.getItem("auth_token");
           if (token) {
             const backend = process.env.REACT_APP_API_URL || "http://localhost:5000";
-           const res = axios.get(`${backend}/profile`, {
+           const res = axios.get(`${backend}/api/profile`, {
                 headers: { Authorization: `Bearer ${token}` },
               })
                 setProfile(res.data);

@@ -11,7 +11,7 @@ export default function Dashboard() {
     try{
     const token = localStorage.getItem("auth_token");
     if (token) {
-      const backend = process.env.BASE_URI || "http://localhost:5000";
+      const backend = process.env.REACT_APP_API_URL || "http://localhost:5000";
       axios
         .get(`${backend}/profile`, {
           headers: { Authorization: `Bearer ${token}` },

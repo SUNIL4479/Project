@@ -47,7 +47,7 @@ const Navbar = ({ activeSection, setActiveSection }) => {
           </div>
           {/* Mobile layout: Dashboard and Logout in middle, toggler right */}
           <div className="sm:hidden flex items-center space-x-2">
-            <button className='rounded-xl px-3 py-1 bg-blue-300 hover:bg-black hover:text-white text-sm' onClick={()=> navigate("/Dashboard")}>
+            <button className='rounded-xl px-3 py-1 bg-blue-300 hover:bg-black hover:text-white text-sm' onClick={()=> navigate("/dashboard")}>
               Dashboard
             </button>
             <button
@@ -61,7 +61,7 @@ const Navbar = ({ activeSection, setActiveSection }) => {
           </div>
           {/* Desktop Dashboard and Logout */}
           <div className="hidden sm:flex sm:space-x-2">
-            <button className='rounded-xl px-5 py-2 bg-blue-300 hover:bg-black hover:text-white text-base' onClick={()=> navigate("/Dashboard")}>
+            <button className='rounded-xl px-5 py-2 bg-blue-300 hover:bg-black hover:text-white text-base' onClick={()=> navigate("/dashboard")}>
               Dashboard
             </button>
           </div>
