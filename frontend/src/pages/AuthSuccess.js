@@ -1,46 +1,54 @@
-import React , {useState, useEffect} from 'react';
-import {useSearchParams, useNavigate} from "react-router-dom";
-import axios from 'axios';
+import React, { useState, useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import axios from "axios";
 
-export default function AuthSuccess(){
-    const [searchParams] = useSearchParams();
-    const navigate = useNavigate();
-    const [profile, setProfile] = useState(null)
-    const [error, setError] = useState(null)
-    useEffect(()=>{
-        const fetchProfile =async ()=>{
-        try{
+export default function AuthSuccess() {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
         const token = searchParams.get("token");
-        if(!token){
-            setError("No token provided");
-            return;
+        if (!token) {
+          setError("No token provided");
+          return;
         }
-        localStorage.setItem("auth_token",token);
 
-        const backend = process.env.REACT_APP_API_URL ;
-       const res = await axios.get(`${backend}/profile`,{
-            headers : {Authorization : `Bearer ${token}`}
+        // ✅ Store token
+        localStorage.setItem("auth_token", token);
+
+        // ✅ Fetch profile
+        const backend = process.env.REACT_APP_API_URL;
+        const res = await axios.get(`${backend}/api/profile`, {
+          headers: { Authorization: `Bearer ${token}` },
         });
-         setProfile(res.data);
-            navigate('/Home');
-    }catch (err){
-        console.log(err);
-    }
-}
+
+        console.log("Profile fetched:", res.data);
+
+        // ✅ Redirect only after successful profile fetch
+        navigate("/Home");
+      } catch (err) {
+        console.error("Error fetching profile:", err);
+        setError("Failed to fetch profile. Please try logging in again.");
+      }
+    };
+
     fetchProfile();
-    },[searchParams,navigate]);
-    
-    if(error) return <div className="min-h-screen flex items-center justify-center bg-gray-100"><h2>{error}</h2></div>
-    if(!profile) return <div className="min-h-screen flex items-center justify-center bg-gray-100"><h2>Loading...</h2></div>
+  }, [searchParams, navigate]);
 
+  // ✅ UI states
+  if (error)
     return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <h2>{error}</h2>
+      </div>
+    );
 
-        <div className="min-h-screen flex items-center justify-center bg-gray-100">
-            <div className="bg-white p-8 rounded-lg shadow-lg text-center">
-                <h2 className="text-2xl font-bold mb-4">Authentication Successful!</h2>
-                <h2 className="mb-4">Welcome, {profile.username}!</h2>
-                <img src={profile.ProfilePic} alt="Profile" className="w-24 h-24 rounded-full mx-auto mb-4" />
-                <p className="mb-4">{JSON.stringify(profile,null,2)}</p>
-            
-                </div>
-        </div>)}
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <h2>Authenticating... Please wait</h2>
+    </div>
+  );
+}

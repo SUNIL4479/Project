@@ -101,7 +101,7 @@
     // Protected route for getting user profile
     const auth = require('./middleware/auth');
     
-  app.get("/api//profile", authenticateToken, async (req, res) => {
+  app.get("/api/profile", authenticateToken, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("-password");
     if (!user) return res.status(404).json({ message: "User not found" });
