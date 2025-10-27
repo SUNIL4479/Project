@@ -8,6 +8,8 @@ export default function AuthSuccess(){
     const [profile, setProfile] = useState(null)
     const [error, setError] = useState(null)
     useEffect(()=>{
+        const fetchProfile =async ()=>{
+        try{
         const token = searchParams.get("token");
         if(!token){
             setError("No token provided");
@@ -16,17 +18,19 @@ export default function AuthSuccess(){
         localStorage.setItem("auth_token",token);
 
         const backend = process.env.REACT_APP_API_URL ;
-        axios.get(`${backend}/profile`,{
+       const res = await axios.get(`${backend}/profile`,{
             headers : {Authorization : `Bearer ${token}`}
-        }).then(res=>{
-            setProfile(res.data);
+        });
+         setProfile(res.data);
             navigate('/Home');
-        }).catch(err=>{
-            setError("Failed to fetch profile");
-        })
+    }catch (err){
+        console.log(err);
+    }
+}
+    fetchProfile();
     },[searchParams,navigate]);
     
-    if(error) return <div className="min-h-screen flex items-center justify-center bg-gray-100"><h2>Error</h2></div>
+    if(error) return <div className="min-h-screen flex items-center justify-center bg-gray-100"><h2>{error}</h2></div>
     if(!profile) return <div className="min-h-screen flex items-center justify-center bg-gray-100"><h2>Loading...</h2></div>
 
     return (

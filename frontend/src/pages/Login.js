@@ -7,8 +7,9 @@ const LoginModal = ({ isOpen, onClose }) => {
     username: '',
     email: '',
     password: '',
+    
   });
-  const [profilePicFile, setProfilePicFile] = useState(null);
+  const [profilePic, setProfilePicFile] = useState(null);
   const backendBase = process.env.REACT_APP_API_URL
   const [errors, setErrors] = useState({});
   useEffect(() => {
@@ -79,7 +80,7 @@ const LoginModal = ({ isOpen, onClose }) => {
     if (!formData.password) newErrors.password = 'Password is required';
     if (!isLogin) {
       if (!formData.username) newErrors.username = 'username is required';
-      if (!profilePicFile) newErrors.profilePic = 'Profile picture is required';
+      if (!profilePic) newErrors.profilePic = 'Profile picture is required';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -104,7 +105,17 @@ const LoginModal = ({ isOpen, onClose }) => {
           const data = await response.json();
           console.log('Login data:', data);
           //google-login
-   
+          const googleLoginResponse = await fetch(`${backendBase}/api/google-login`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: formData.email,
+              username: formData.username
+            }),
+          });
+          const data1 = await googleLoginResponse.json();
           console.log('Login data:', data);
           if (response.ok) {
             localStorage.setItem('auth_token', data.token);
@@ -120,33 +131,62 @@ const LoginModal = ({ isOpen, onClose }) => {
           formDataToSend.append('username', formData.username);
           formDataToSend.append('email', formData.email);
           formDataToSend.append('password', formData.password);
-          if (profilePicFile) {
-            formDataToSend.append('profilePic', profilePicFile);
+          if (profilePic) {
+            formDataToSend.append('profilePic', profilePic);
           }
-          const response = await fetch(`${backendBase}/api/register`, {
-            method: 'POST',
-            body: formDataToSend,
+          console.log('Attempting to register with:', {
+            username: formData.username,
+            email: formData.email,
+            hasProfilePic: !!profilePic
           });
-          const data = await response.json();
-          console.log('Signup form data:', formData);
-          console.log('Profile pic file:', profilePicFile);
-          console.log('Signup response status:', response.status);
-          console.log('Signup response data:', data);
-          if (response.ok) {
-            setShowSuccessModal(true);
-            setTimeout(() => {
-              setShowSuccessModal(false);
-              setIsLogin(true);
-              setFormData({ username: '', email: '', password: ''});
-              setProfilePicFile(null);
-            }, 2000);
-          } else {
-            setErrors({ ...errors, api: data.message || 'Registration failed' });
+          
+          try {
+            const response = await fetch(`${backendBase}/api/register`, {
+              method: 'POST',
+              body: formDataToSend,
+              headers: {
+                // Don't set Content-Type header when sending FormData
+                // Let the browser set it automatically with the correct boundary
+                'Content-Type': 'application/json'
+              },
+            });
+            
+            console.log('Registration response status:', response.status);
+            
+            // Try to get the response text first
+            const responseText = await response.text();
+            console.log('Raw response:', responseText);
+            
+            // Then parse it as JSON if possible
+            let data;
+            try {
+              data = JSON.parse(responseText);
+              console.log('Parsed response data:', data);
+            } catch (e) {
+              console.error('Failed to parse response as JSON:', responseText);
+              throw new Error('Server returned invalid JSON');
+            }
+          
+            if (response.ok) {
+              console.log('Registration successful');
+              localStorage.setItem('auth_token', data.token);
+              setShowSuccessModal(true);
+              setTimeout(() => {
+                setShowSuccessModal(false);
+                navigate('/Home');
+              }, 2000);
+            } else {
+              const errorMessage = data.error || data.message || 'Registration failed';
+              setErrors({ ...errors, api: errorMessage });
+            }
+          } catch (registrationError) {
+            console.error('Registration error:', registrationError);
+            setErrors({ ...errors, api: 'Registration failed. Please try again.' });
           }
         }
       } catch (error) {
-        console.error('Error:', error);
-        setErrors({ ...errors, api: 'An error occurred' });
+        console.error('Form submission error:', error);
+        setErrors({ ...errors, api: 'An unexpected error occurred' });
       }
     }
   };

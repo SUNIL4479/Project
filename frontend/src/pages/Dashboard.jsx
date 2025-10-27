@@ -8,6 +8,7 @@ export default function Dashboard() {
   const [profile, setProfile] = useState(null);
 
   useEffect(() => {
+    try{
     const token = localStorage.getItem("auth_token");
     if (token) {
       const backend = process.env.BASE_URI || "http://localhost:5000";
@@ -15,14 +16,10 @@ export default function Dashboard() {
         .get(`${backend}/profile`, {
           headers: { Authorization: `Bearer ${token}` },
         })
-        .then((res) => {
           setProfile(res.data);
-        })
-        .catch((err) => {
-          console.error("Failed to fetch profile", err);
-          localStorage.removeItem("auth_token");
-          setProfile(null);
-        });
+      }
+    }catch(e){
+      console.error("Failed to fetch profile", e);
     }
   }, []);
 

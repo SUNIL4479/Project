@@ -1,5 +1,5 @@
     require('dotenv').config();
-    const express = require("express")
+    const express = require("express");
     const session = require("express-session");
     const mongoose = require("mongoose");
     const passport = require("passport");
@@ -8,19 +8,44 @@
     const multer = require("multer");
     const bcrypt = require("bcrypt");
     const path = require("path");
+    const fs = require('fs');
     const User = require("./models/USerModel")
+    const Contest = require("./models/ContestModel")
     require("./auth/google")
     const app = express();
     const port = process.env.PORT || 5000   
+    // Ensure uploads directory exists
+    const uploadsDir = path.join(__dirname, 'uploads');
+    if (!fs.existsSync(uploadsDir)){
+        fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
     const storage = multer.diskStorage({
         destination: (req, file, cb) => {
-            cb(null, 'uploads/');
+            cb(null, uploadsDir);
         },
         filename: (req, file, cb) => {
-            cb(null, Date.now() + path.extname(file.originalname));
+            // Sanitize filename
+            const safeName = Date.now() + '-' + file.originalname.replace(/[^a-zA-Z0-9.]/g, '_');
+            cb(null, safeName);
         }
     });
-    const upload = multer({ storage: storage });
+
+    const fileFilter = (req, file, cb) => {
+        // Accept images only
+        if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
+            return cb(new Error('Only image files are allowed!'), false);
+        }
+        cb(null, true);
+    };
+
+    const upload = multer({ 
+        storage: storage,
+        fileFilter: fileFilter,
+        limits: {
+            fileSize: 5 * 1024 * 1024 // 5MB limit
+        }
+    });
 
     app.use(express.json());
     
@@ -147,19 +172,178 @@
     });
 
     // Registration route
-    app.post("/api/register", upload.single('profilePic'), async (req, res) => {
-        try {
-            const { username, email, password, college } = req.body;
-            
-            // Check if user already exists
-            const existingUser = await User.findOne({ 
-                $or: [{ email }, { username }] 
+    // Multer error handling middleware
+    const handleMulterError = (err, req, res, next) => {
+        if (err instanceof multer.MulterError) {
+            // A Multer error occurred when uploading.
+            return res.status(400).json({
+                error: err.message || 'File upload error',
+                code: 'UPLOAD_ERROR'
             });
-            
-            if (existingUser) {
-                return res.status(400).json({ 
-                    error: "Email or username already exists" 
+        } else if (err) {
+            // An unknown error occurred when uploading.
+            return res.status(500).json({
+                error: 'Unknown upload error occurred',
+                code: 'UNKNOWN_ERROR'
+            });
+        }
+        next();
+    };
+
+    // Contest Routes
+    app.post("/contests", auth, async (req, res) => {
+        try {
+            console.log('Received contest creation request:', req.body);
+            const { title, description, startTime, endTime, problems } = req.body;
+
+            // Detailed validation
+            const validationErrors = [];
+            if (!title) validationErrors.push('Title is required');
+            if (!description) validationErrors.push('Description is required');
+            if (!startTime) validationErrors.push('Start time is required');
+            if (!endTime) validationErrors.push('End time is required');
+            if (!problems || !Array.isArray(problems)) validationErrors.push('Problems array is required');
+            if (problems && problems.length === 0) validationErrors.push('At least one problem is required');
+
+            if (validationErrors.length > 0) {
+                console.log('Validation errors:', validationErrors);
+                return res.status(400).json({
+                    error: "Validation failed",
+                    details: validationErrors
                 });
+            }
+
+            // Validate dates
+            const startDateTime = new Date(startTime);
+            const endDateTime = new Date(endTime);
+            const now = new Date();
+
+            if (isNaN(startDateTime.getTime())) {
+                return res.status(400).json({
+                    error: "Invalid start time format"
+                });
+            }
+
+            if (isNaN(endDateTime.getTime())) {
+                return res.status(400).json({
+                    error: "Invalid end time format"
+                });
+            }
+
+            if (endDateTime <= startDateTime) {
+                return res.status(400).json({
+                    error: "End time must be after start time"
+                });
+            }
+
+            // Create contest with proper schema mapping
+            const contest = new Contest({
+                title,
+                description,
+                startTime: startDateTime,
+                endTime: endDateTime,
+                problems: problems.map(problem => ({
+                    title: problem.title,
+                    description: problem.description,
+                    inputFormat: problem.inputFormat,
+                    outputFormat: problem.outputFormat,
+                    constraints: problem.constraints,
+                    sampleInput: problem.sampleInput,
+                    sampleOutput: problem.sampleOutput,
+                    testCases: problem.testCases.map(tc => ({
+                        input: tc.input,
+                        output: tc.output
+                    }))
+                })),
+                createdBy: req.user._id // Match the schema field name
+            });
+
+            console.log('Attempting to save contest:', contest);
+            await contest.save();
+            console.log('Contest created successfully:', contest._id);
+
+            res.status(201).json({
+                success: true,
+                contest: {
+                    id: contest._id,
+                    title: contest.title,
+                    startTime: contest.startTime,
+                    endTime: contest.endTime
+                }
+            });
+        } catch (error) {
+            console.error('Contest creation error:', error);
+            if (error.name === 'ValidationError') {
+                return res.status(400).json({
+                    error: "Validation failed",
+                    details: Object.values(error.errors).map(err => err.message)
+                });
+            }
+            res.status(500).json({
+                error: "Failed to create contest",
+                message: error.message
+            });
+        }
+    });
+
+    app.post("/api/register", upload.single('profilePic'), handleMulterError, async (req, res) => {
+        try {
+            console.log('Registration request received');
+            console.log('Request body:', req.body);
+            console.log('File:', req.file);
+
+            const { username, email, password } = req.body;
+            
+            // Validate required fields
+            if (!username || !email || !password) {
+                const errorMsg = { 
+                    error: "All fields are required",
+                    missing: {
+                        username: !username,
+                        email: !email,
+                        password: !password
+                    }
+                };
+                console.log('Validation error:', errorMsg);
+                return res.status(400).json(errorMsg);
+            }
+
+            // Validate email format
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                return res.status(400).json({
+                    error: "Invalid email format"
+                });
+            }
+
+            // Validate password strength
+            if (password.length < 6) {
+                return res.status(400).json({
+                    error: "Password must be at least 6 characters long"
+                });
+            }
+
+            try {
+                // Check if user already exists
+                const existingUser = await User.findOne({
+                $or: [{ email }, { username }]
+            });
+
+            if (existingUser) {
+                console.log('User already exists:', {
+                    email: existingUser.email,
+                    username: existingUser.username
+                });
+                return res.status(400).json({
+                    error: "Email or username already exists"
+                });
+            }
+
+            // Process profile picture
+            let profilePicPath = null;
+            if (req.file) {
+                profilePicPath = `/uploads/${req.file.filename}`;
+                console.log('Profile picture saved:', profilePicPath);
             }
 
             // Hash password
@@ -170,17 +354,23 @@
                 username,
                 email,
                 password: hashedPassword,
-                college,
-                ProfilePic: req.file ? '/uploads/' + req.file.filename : undefined
+                ProfilePic: profilePicPath
             });
 
             await user.save();
+            console.log('New user created:', {
+                id: user._id,
+                email: user.email,
+                username: user.username
+            });
 
             // Create token
             const payload = { id: user._id, email: user.email };
-            const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "7d" });
+            const token = jwt.sign(payload, process.env.JWT_SECRET || 'fallback-secret-key', { expiresIn: "7d" });
 
-            res.status(201).json({
+            // Send successful response
+            return res.status(201).json({
+                success: true,
                 token,
                 user: {
                     id: user._id,
@@ -189,6 +379,13 @@
                     ProfilePic: user.ProfilePic
                 }
             });
+            } catch (dbError) {
+                console.error('Database operation failed:', dbError);
+                return res.status(500).json({
+                    error: "Failed to create user account",
+                    details: process.env.NODE_ENV === 'development' ? dbError.message : undefined
+                });
+            }
         } catch (error) {
             console.error("Registration error:", error);
             res.status(500).json({ error: "Error during registration" });
@@ -198,107 +395,275 @@
     function authenticateToken(req,res,next){
         const authHeader = req.headers["authorization"];
         const token = authHeader && authHeader.split(" ")[1] || req.query.token;
-        if(!token) return res.sendStatus(401).json({message : "No token provided"});
+        if(!token) return res.status(401).json({message : "No token provided"});
         jwt.verify(token,process.env.JWT_SECRET,(err,user)=>{
-            if(err) return res.sendStatus(403).json({message : "Invalid token"});
+            if(err) return res.status(403).json({message : "Invalid token"});
             req.user = user;
             next();
         });
     }
-    app.get("/profile", authenticateToken, async (req,res)=>{
+    app.get("/api/profile", authenticateToken, async (req,res)=>{
         try{
-            const user = await User.findById(req.user.id).select("-__v");
+            const user = await User.findById(req.user.id).select("-password -__v");
             if(!user) return res.status(404).json({message : "User not found"});
             res.json(user);
         }catch(err){
+            console.error("Profile fetch error:", err);
             res.status(500).json({message : "Server error"});
         }
     })
-
-    app.post("/api/register", upload.single('profilePic'), async (req, res) => {
+    // Get Contests Created by User
+    app.get("/api/contests/created", auth, async (req, res) => {
         try {
-            const { username, email, password } = req.body;
-            const profilePic = req.file ? req.file.path : null;
+            const contests = await Contest.find({ createdBy: req.user._id })
+                .sort({ createdAt: -1 })
+                .select('title description startTime endTime problems createdAt');
 
-            // Check if user already exists
-            const existingUser = await User.findOne({ $or: [{ email }, { username }] });
-            if (existingUser) {
-                return res.status(400).json({ message: "User already exists" });
+            const formattedContests = contests.map(contest => ({
+                id: contest._id,
+                name: contest.title,
+                description: contest.description,
+                startTime: contest.startTime,
+                endTime: contest.endTime,
+                problemsCount: contest.problems.length,
+                createdAt: contest.createdAt
+            }));
+
+            res.json(formattedContests);
+        } catch (error) {
+            console.error("Error fetching created contests:", error);
+            res.status(500).json({ error: "Error fetching contests" });
+        }
+    });
+
+    // Get Scheduled Contests (future contests)
+    app.get("/api/contests/scheduled", async (req, res) => {
+        try {
+            const now = new Date();
+            const contests = await Contest.find({
+                startTime: { $gt: now }
+            })
+            .populate('createdBy', 'username')
+            .sort({ startTime: 1 })
+            .select('title description startTime endTime problems createdBy');
+
+            const formattedContests = contests.map(contest => ({
+                id: contest._id,
+                name: contest.title,
+                description: contest.description,
+                date: contest.startTime.toISOString().split('T')[0],
+                time: contest.startTime.toTimeString().slice(0, 5),
+                duration: Math.round((contest.endTime - contest.startTime) / (1000 * 60 * 60)) + ' hours',
+                problemsCount: contest.problems.length,
+                createdBy: contest.createdBy?.username || 'Unknown'
+            }));
+
+            res.json(formattedContests);
+        } catch (error) {
+            console.error("Error fetching scheduled contests:", error);
+            res.status(500).json({ error: "Error fetching contests" });
+        }
+    });
+
+    // Get Running Contests (currently active contests)
+    app.get("/api/contests/running", async (req, res) => {
+        try {
+            const now = new Date();
+            const contests = await Contest.find({
+                startTime: { $lte: now },
+                endTime: { $gte: now }
+            })
+            .populate('createdBy', 'username')
+            .sort({ startTime: 1 })
+            .select('title description startTime endTime problems createdBy');
+
+            const formattedContests = contests.map(contest => ({
+                id: contest._id,
+                name: contest.title,
+                description: contest.description,
+                startTime: contest.startTime,
+                endTime: contest.endTime,
+                problemsCount: contest.problems.length,
+                createdBy: contest.createdBy?.username || 'Unknown'
+            }));
+
+            res.json(formattedContests);
+        } catch (error) {
+            console.error("Error fetching running contests:", error);
+            res.status(500).json({ error: "Error fetching contests" });
+        }
+    });
+
+    // Create Contest Route
+    app.post("/contests", auth, async (req, res) => {
+        try {
+            const { title, description, startTime, endTime, problems } = req.body;
+
+            // Validate required fields
+            if (!title || !description || !startTime || !endTime) {
+                return res.status(400).json({ error: "Title, description, start time, and end time are required" });
             }
 
-            // Hash password
-            const hashedPassword = await bcrypt.hash(password, 10);
+            // Validate date formats and logic
+            const start = new Date(startTime);
+            const end = new Date(endTime);
+            const now = new Date();
 
-            // Create new user
-            const newUser = new User({
-                googleId : "",
-                username,
-                email,
-                password: hashedPassword,
-                ProfilePic: profilePic
+            if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+                return res.status(400).json({ error: "Invalid date format" });
+            }
+
+            if (start >= end) {
+                return res.status(400).json({ error: "Start time must be before end time" });
+            }
+
+            if (start <= now) {
+                return res.status(400).json({ error: "Start time must be in the future" });
+            }
+
+            // Validate problems array
+            if (!Array.isArray(problems) || problems.length === 0) {
+                return res.status(400).json({ error: "At least one problem is required" });
+            }
+
+            // Validate each problem
+            for (let i = 0; i < problems.length; i++) {
+                const problem = problems[i];
+                if (!problem.title || !problem.description) {
+                    return res.status(400).json({ error: `Problem ${i + 1}: Title and description are required` });
+                }
+                if (!Array.isArray(problem.testCases) || problem.testCases.length === 0) {
+                    return res.status(400).json({ error: `Problem ${i + 1}: At least one test case is required` });
+                }
+                // Validate test cases
+                for (let j = 0; j < problem.testCases.length; j++) {
+                    const testCase = problem.testCases[j];
+                    if (!testCase.input || !testCase.output) {
+                        return res.status(400).json({ error: `Problem ${i + 1}, Test Case ${j + 1}: Input and output are required` });
+                    }
+                }
+            }
+
+            // Create new contest
+            const contest = new Contest({
+                title,
+                description,
+                startTime: start,
+                endTime: end,
+                problems,
+                createdBy: req.user._id
             });
 
-            await newUser.save();
-            res.status(201).json({ message: "User registered successfully" });
+            await contest.save();
+
+            res.status(201).json({
+                message: "Contest created successfully",
+                contest: {
+                    id: contest._id,
+                    title: contest.title,
+                    description: contest.description,
+                    startTime: contest.startTime,
+                    endTime: contest.endTime,
+                    problems: contest.problems,
+                    createdBy: contest.createdBy,
+                    createdAt: contest.createdAt
+                }
+            });
         } catch (error) {
-            console.error(error);
-            res.status(500).json({ message: "Server error" });
+            console.error("Error creating contest:", error);
+            res.status(500).json({ error: "Error creating contest" });
         }
     });
-    app.post("/api/login", async (req, res) => {
+
+    // Get Contest by ID Route
+    app.get("/api/contests/:id", auth, async (req, res) => {
         try {
-            const { email, password } = req.body;
-
-            // Find user by email
-            const user = await User.findOne({ email });
-            if (!user) {
-                return res.status(400).json({ message: "Invalid credentials" });
+            const contest = await Contest.findById(req.params.id);
+            if (!contest) {
+                return res.status(404).json({ error: "Contest not found" });
             }
 
-            // Check password
-            const isMatch = await bcrypt.compare(password, user.password);
-            if (!isMatch) {
-                return res.status(400).json({ message: "Invalid credentials" });
+            // Check if contest has started
+            const now = new Date();
+            if (now < contest.startTime) {
+                return res.status(403).json({ error: "Contest has not started yet" });
             }
 
-            // Generate JWT token
-            const payload = { id: user._id, username: user.username, email: user.email };
-            const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "7d" });
-
-            res.json({ message: "Login successful", token });
+            res.json({
+                _id: contest._id,
+                title: contest.title,
+                description: contest.description,
+                startTime: contest.startTime,
+                endTime: contest.endTime,
+                problems: contest.problems.map(problem => ({
+                    title: problem.title,
+                    description: problem.description,
+                    inputFormat: problem.inputFormat,
+                    outputFormat: problem.outputFormat,
+                    constraints: problem.constraints,
+                    sampleInput: problem.sampleInput,
+                    sampleOutput: problem.sampleOutput,
+                    testCases: problem.testCases // Include test cases for judging
+                })),
+                createdBy: contest.createdBy,
+                createdAt: contest.createdAt
+            });
         } catch (error) {
-            console.error(error);
-            res.status(500).json({ message: "Server error" });
+            console.error("Error fetching contest:", error);
+            res.status(500).json({ error: "Error fetching contest" });
         }
     });
 
-    app.post("/api/google-login", async (req, res) => {
+    // Submit Code Route
+    app.post("/api/contests/:contestId/submit", auth, async (req, res) => {
         try {
-            const { googleId, username, email, profilePic } = req.body;
+            const { problemIndex, code, language } = req.body;
 
-            // Check if user already exists by googleId
-            let user = await User.findOne({ googleId });
-            if (!user) {
-                // Create new user
-                user = new User({
-                    googleId,
-                    username,
-                    email,
-                    ProfilePic: profilePic
-                });
-                await user.save();
+            if (problemIndex === undefined || !code || !language) {
+                return res.status(400).json({ error: "Problem index, code, and language are required" });
             }
 
-            // Generate JWT token
-            const payload = { id: user._id, username: user.username, email: user.email };
-            const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "7d" });
+            const contest = await Contest.findById(req.params.contestId);
+            if (!contest) {
+                return res.status(404).json({ error: "Contest not found" });
+            }
 
-            res.json({ message: "Google login successful", token });
+            // Check if contest is active
+            const now = new Date();
+            if (now < contest.startTime || now > contest.endTime) {
+                return res.status(403).json({ error: "Contest is not active" });
+            }
+
+            if (problemIndex < 0 || problemIndex >= contest.problems.length) {
+                return res.status(400).json({ error: "Invalid problem index" });
+            }
+
+            const problem = contest.problems[problemIndex];
+
+            // Simple code execution simulation (in a real app, you'd use a judge system)
+            let status = "Wrong Answer";
+            try {
+                // For demo purposes, we'll just check if the code contains certain keywords
+                // In a real implementation, you'd run the code against test cases
+                if (code.includes("console.log") || code.includes("print")) {
+                    status = "Accepted";
+                }
+            } catch (error) {
+                status = "Runtime Error";
+            }
+
+            res.json({
+                message: "Code submitted successfully",
+                status,
+                problemIndex,
+                language
+            });
         } catch (error) {
-            console.error(error);
-            res.status(500).json({ message: "Server error" });
+            console.error("Error submitting code:", error);
+            res.status(500).json({ error: "Error submitting code" });
         }
     });
+
     app.listen(port,"0.0.0.0",()=>{
         console.log(`Server is running on port ${port}`);
     })

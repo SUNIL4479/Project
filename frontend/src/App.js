@@ -15,6 +15,7 @@ import Home from './components/Home-Dashboard/Home';
 import LoginPage from './components/LoginPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import CreateContest from "./components/Contests/createContest"
+import ContestParticipation from "./components/Contests/ContestParticipation"
 import { useEffect } from "react";
 function App() {
   useEffect(() => {
@@ -42,6 +43,7 @@ function App() {
             <Route path='create-contest' element={<CreateContest/>}/>
             <Route path="performance" element={<Performance />} />
           </Route>
+          <Route path="/contest/:contestId" element={<ProtectedRoute><ContestParticipation /></ProtectedRoute>} />
           <Route path="/contest/:id" element={<ProtectedRoute><ContestDetails /></ProtectedRoute>} />
           <Route path="/contest/:id/submit" element={<ProtectedRoute><Submission /></ProtectedRoute>} />
           <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
