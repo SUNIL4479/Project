@@ -10,9 +10,9 @@ export default function Dashboard() {
   useEffect(() => {
     const token = localStorage.getItem("auth_token");
     if (token) {
-      const backend = process.env.BASE_URI || "http://localhost:5000";
+      const backend = process.env.REACT_APP_API_URL || "http://localhost:5000";
       axios
-        .get(`${backend}/profile`, {
+        .get(`${backend}/api/profile`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         .then((res) => {

@@ -76,7 +76,12 @@ export default function CreateContest() {
       if (!contestData.endTime) validationErrors.push('End time is required');
       
       if (contestData.problems.length === 0) {
-        validationErrors.push('Please add at least one problem');
+        // Check if there's a problem in the form that hasn't been added yet
+        if (problem.title || problem.description || problem.testCases.length > 0) {
+          validationErrors.push('You have a problem in the form that hasn\'t been added to the contest yet. Please click "Add Problem" button to add it.');
+        } else {
+          validationErrors.push('Please add at least one problem');
+        }
       }
 
       // Validate each problem

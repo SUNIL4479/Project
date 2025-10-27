@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const ScheduledContests = () => {
+  const navigate = useNavigate();
   const [scheduledContests, setScheduledContests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -9,7 +11,7 @@ const ScheduledContests = () => {
   useEffect(() => {
     const fetchScheduledContests = async () => {
       try {
-        const backend = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+        const backend = process.env.REACT_APP_API_URL || 'http://localhost:5000';
         const response = await axios.get(`${backend}/api/contests/scheduled`);
         setScheduledContests(response.data);
       } catch (error) {
@@ -67,7 +69,10 @@ const ScheduledContests = () => {
               <p className="text-white mb-4">Duration: {contest.duration}</p>
               <p className="text-white mb-4">Problems: {contest.problemsCount}</p>
               <p className="text-white mb-4">Created by: {contest.createdBy}</p>
-              <button className="bg-black text-white px-4 py-2 rounded-md hover:bg-gray-800 transition-colors">
+              <button
+                onClick={() => navigate(`/contest/${contest._id}`)}
+                className="bg-black text-white px-4 py-2 rounded-md hover:bg-gray-800 transition-colors"
+              >
                 Register
               </button>
             </div>
